@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesa BAU - BBVA Seguros Colombia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --navy:#072146;
+  --azul:#004481;
+  --teal:#02A5A5;
+  --white:#FFFFFF;
+  --bg:#f2f4f7;
+  --border:#dde3ea;
+  --text:#1c2b3a;
+  --crit-critica:#d32f2f;
+  --crit-alta:#f57c00;
+  --crit-media:#fbc02d;
+  --crit-baja:#43a047;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);}
+header.topbar{background:var(--navy);color:var(--white);display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:64px;box-shadow:0 2px 6px rgba(0,0,0,.25);position:sticky;top:0;z-index:50;}
+header.topbar .brand{display:flex;flex-direction:column;line-height:1.1;}
+header.topbar .brand b{font-size:16px;}
+header.topbar .brand span{font-size:11px;color:#9fb8d1;}
+nav.mainnav{display:flex;gap:6px;}
+nav.mainnav button{background:transparent;border:1px solid transparent;color:#cfe0f0;padding:9px 16px;font-size:13px;font-weight:bold;border-radius:6px;cursor:pointer;transition:.15s;}
+nav.mainnav button:hover{background:rgba(255,255,255,.08);}
+nav.mainnav button.active{background:var(--teal);color:var(--navy);}
+.badge-total{background:var(--azul);color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:bold;}
+main{padding:20px;max-width:1600px;margin:0 auto;}
+.view{display:none;}
+.view.active{display:block;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+h2.section-title{color:var(--navy);font-size:19px;margin:0 0 14px;border-left:4px solid var(--teal);padding-left:10px;}
+/* ---------- Importer ---------- */
+.import-box{text-align:center;padding:50px 20px;border:2px dashed var(--azul);border-radius:10px;background:#fbfdff;}
+.btn{background:var(--azul);color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;transition:.15s;}
+.btn:hover{background:var(--navy);}
+.btn.teal{background:var(--teal);}
+.btn.teal:hover{background:#028787;}
+.btn.outline{background:transparent;color:var(--azul);border:1px solid var(--azul);}
+.btn.outline:hover{background:#eaf1f8;}
+.btn.small{padding:5px 10px;font-size:12px;}
+.btn.danger{background:#c0392b;}
+input[type=file]{display:none;}
+#importSummary{margin-top:18px;font-size:14px;}
+#importSummary .ok{color:#1b7a3d;font-weight:bold;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:14px 20px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.3);font-size:13px;z-index:999;opacity:0;transform:translateY(20px);transition:.25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+/* ---------- Filters ---------- */
+.filterbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center;}
+.filterbar select,.filterbar input[type=text]{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:150px;}
+.filterbar label{font-size:11px;color:#5b6b7c;display:block;margin-bottom:3px;}
+.filtergroup{display:flex;flex-direction:column;}
+/* ---------- Kanban ---------- */
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;}
+.kanban-col{background:#eef1f5;border-radius:8px;min-width:250px;max-width:270px;flex:1 0 250px;display:flex;flex-direction:column;max-height:75vh;}
+.kanban-col-header{padding:10px 12px;font-weight:bold;font-size:13px;color:var(--navy);border-bottom:2px solid var(--teal);display:flex;justify-content:space-between;align-items:center;}
+.kanban-col-header .count{background:var(--navy);color:#fff;border-radius:12px;padding:1px 9px;font-size:11px;}
+.kanban-col-body{padding:8px;overflow-y:auto;flex:1;}
+.kanban-col-body.dragover{background:#dceffb;}
+.kcard{background:#fff;border-radius:6px;padding:9px 10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.12);cursor:grab;border-left:5px solid #999;font-size:12.5px;}
+.kcard:active{cursor:grabbing;}
+.kcard .kc-top{display:flex;justify-content:space-between;font-weight:bold;color:var(--navy);margin-bottom:3px;}
+.kcard .kc-asunto{color:#333;margin-bottom:6px;line-height:1.3;}
+.kcard .kc-meta{display:flex;flex-wrap:wrap;gap:5px;font-size:11px;color:#5b6b7c;align-items:center;}
+.kcard .kc-bloqueador{color:#c0392b;font-weight:bold;margin-top:4px;font-size:11px;}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:bold;color:#fff;}
+.star-btn{border:none;background:none;cursor:pointer;font-size:14px;line-height:1;}
+/* ---------- Dashboard ---------- */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
+.kpi-card{background:var(--white);border-radius:8px;padding:16px;text-align:center;border-top:4px solid var(--teal);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.kpi-card .num{font-size:32px;font-weight:bold;color:var(--navy);}
+.kpi-card .label{font-size:12px;color:#5b6b7c;margin-top:4px;}
+.kpi-card.alert{border-top-color:#c0392b;}
+.kpi-card.alert .num{color:#c0392b;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+table th,table td{border:1px solid var(--border);padding:7px 9px;text-align:left;}
+table th{background:var(--navy);color:#fff;position:sticky;top:0;cursor:pointer;white-space:nowrap;}
+table tbody tr:nth-child(even){background:#f7f9fb;}
+.alert-cell{font-weight:bold;text-align:center;color:#fff;border-radius:4px;}
+.alert-rojo{background:#c0392b;}
+.alert-amarillo{background:#e0a900;}
+.alert-verde{background:#1b7a3d;}
+.crit-list-item{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;}
+.crit-list-item:last-child{border-bottom:none;}
+/* ---------- Table view ---------- */
+.table-scroll{overflow:auto;max-height:70vh;border:1px solid var(--border);border-radius:8px;}
+.table-scroll table{font-size:12px;}
+.sort-arrow{font-size:10px;margin-left:4px;}
+/* ---------- Edit panel ---------- */
+#overlay{position:fixed;inset:0;background:rgba(7,33,70,.45);display:none;z-index:100;}
+#overlay.show{display:block;}
+#editPanel{position:fixed;top:0;right:-460px;width:440px;height:100%;background:#fff;box-shadow:-4px 0 16px rgba(0,0,0,.25);z-index:101;transition:right .2s ease;overflow-y:auto;}
+#editPanel.show{right:0;}
+#editPanel .ep-header{background:var(--navy);color:#fff;padding:16px 20px;position:sticky;top:0;}
+#editPanel .ep-header h3{margin:0;font-size:16px;}
+#editPanel .ep-header small{color:#9fb8d1;}
+#editPanel .ep-body{padding:16px 20px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;font-weight:bold;color:#5b6b7c;margin-bottom:4px;text-transform:uppercase;}
+.field select,.field input[type=text],.field input[type=date],.field textarea{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:Arial;}
+.field textarea{min-height:70px;resize:vertical;}
+.field.checkbox{display:flex;align-items:center;gap:8px;}
+.field.checkbox label{margin:0;}
+.readonly-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;background:#f7f9fb;padding:10px;border-radius:6px;margin-bottom:14px;}
+.readonly-grid div b{display:block;color:#5b6b7c;font-size:10px;text-transform:uppercase;}
+.ep-actions{display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--border);position:sticky;bottom:0;background:#fff;}
+details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8px;}
+#bitLog{white-space:pre-wrap;background:#f7f9fb;border-radius:6px;padding:8px;font-size:12px;max-height:100px;overflow-y:auto;margin-bottom:6px;}
+.hidden{display:none !important;}
+.hint{font-size:11px;color:#8a97a5;margin-top:-6px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><b>BBVA Seguros Colombia</b><span>Mesa de Soporte BAU</span></div>
+  <nav class="mainnav">
+    <button data-view="import" class="active">Importar</button>
+    <button data-view="kanban">Kanban</button>
+    <button data-view="dashboard">Dashboard</button>
+    <button data-view="tabla">Tabla</button>
+  </nav>
+  <div class="badge-total" id="totalBadge">0 casos</div>
+</header>
+
+<main>
+
+  <!-- ============ IMPORT VIEW ============ -->
+  <section id="view-import" class="view active">
+    <div class="card">
+      <h2 class="section-title">Importador de Aranda</h2>
+      <div class="import-box">
+        <p style="color:var(--azul);font-weight:bold;">Selecciona uno o varios archivos .xlsx exportados de Aranda</p>
+        <label for="fileInput" class="btn">Importar Excel de Aranda</label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+        <div id="importSummary"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h2 class="section-title">Backup local</h2>
+      <button class="btn outline" id="btnExportBackup">Exportar backup (JSON)</button>
+      <label for="backupInput" class="btn outline">Importar backup (JSON)</label>
+      <input type="file" id="backupInput" accept=".json">
+      <p class="hint">El backup incluye todos los casos y columnas manuales guardadas en este navegador.</p>
+    </div>
+  </section>
+
+  <!-- ============ KANBAN VIEW ============ -->
+  <section id="view-kanban" class="view">
+    <h2 class="section-title">Tablero Kanban</h2>
+    <div class="filterbar">
+      <div class="filtergroup"><label>Mesa</label><select id="kfMesa"><option value="">Todas</option></select></div>
+      <div class="filtergroup"><label>Criticidad</label><select id="kfCrit"><option value="">Todas</option></select></div>
+      <div class="filtergroup"><label>SRL</label><select id="kfSrl"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>Tipo</label><select id="kfTipo"><option value="">Todos</option></select></div>
+    </div>
+    <div class="kanban-board" id="kanbanBoard"></div>
+  </section>
+
+  <!-- ============ DASHBOARD VIEW ============ -->
+  <section id="view-dashboard" class="view">
+    <h2 class="section-title">Dashboard Ejecutivo</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="card" style="margin-bottom:16px;">
+      <h2 class="section-title" style="margin-top:0;">Semáforo por Mesa</h2>
+      <table id="semaforoTable">
+        <thead><tr><th>Mesa</th><th>Novedades</th><th>Incidencias</th><th>Mantenimientos</th><th>Bloqueados</th><th>Días prom. en cola</th><th>Alerta</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2 class="section-title" style="margin-top:0;">Críticos Activos</h2>
+      <div id="criticosList"></div>
+    </div>
+  </section>
+
+  <!-- ============ TABLE VIEW ============ -->
+  <section id="view-tabla" class="view">
+    <h2 class="section-title">Vista Tabla Completa</h2>
+    <div class="filterbar">
+      <div class="filtergroup"><label>Buscar (No. Caso / Asunto)</label><input type="text" id="tfSearch" placeholder="Buscar..."></div>
+      <div class="filtergroup"><label>Tipo</label><select id="tfTipo"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>Criticidad</label><select id="tfCrit"><option value="">Todas</option></select></div>
+      <div class="filtergroup"><label>Mesa</label><select id="tfMesa"><option value="">Todas</option></select></div>
+      <div class="filtergroup"><label>SRL</label><select id="tfSrl"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>Estado BAU</label><select id="tfEstado"><option value="">Todos</option></select></div>
+      <div class="filtergroup" style="justify-content:flex-end;"><button class="btn teal" id="btnExportExcel">Exportar a Excel</button></div>
+    </div>
+    <div class="table-scroll"><table id="fullTable"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+</main>
+
+<div id="overlay"></div>
+<aside id="editPanel">
+  <div class="ep-header">
+    <h3 id="epTitle">Caso</h3>
+    <small id="epSubtitle"></small>
+  </div>
+  <div class="ep-body">
+    <details>
+      <summary>Ver datos completos de Aranda</summary>
+      <div class="readonly-grid" id="epArandaGrid"></div>
+    </details>
+
+    <div class="field"><label>Tipo</label>
+      <select id="epTipo"><option value="">-- Seleccionar --</option><option>NOVEDAD</option><option>INCIDENCIA</option><option>MANTENIMIENTO</option></select>
+    </div>
+    <div class="field"><label>Criticidad</label>
+      <select id="epCrit"><option value="">-- Seleccionar --</option><option>Crítica</option><option>Alta</option><option>Media</option><option>Baja</option></select>
+    </div>
+    <div class="field"><label>Mesa</label>
+      <select id="epMesa"><option value="">-- Seleccionar --</option><option>AcselX-AcselWeb</option><option>Altamira-SICS-Oasis</option><option>APlus</option></select>
+    </div>
+    <div class="field"><label>SRL Responsable</label>
+      <select id="epSrl"><option>Sin asignar</option><option>José Miguel</option><option>Juan Carlos</option><option>Cristian Ramírez</option></select>
+    </div>
+    <div class="field"><label>Desarrollador</label><input type="text" id="epDev"></div>
+    <div class="field"><label>Estado BAU</label>
+      <select id="epEstadoBau">
+        <option>Registro</option><option>Análisis</option><option>Desarrollo</option><option>Calidad</option>
+        <option>Pdte Instalación</option><option>Bloqueado</option><option>Cerrado</option><option>Descartado</option>
+      </select>
+    </div>
+    <div class="field"><label>Fecha compromiso producción</label><input type="date" id="epFechaCompromiso"></div>
+    <div id="epBloqueadorWrap" class="hidden">
+      <div class="field"><label>Bloqueador</label><input type="text" id="epBloqueador"></div>
+      <div class="field"><label>Quién desbloquea</label><input type="text" id="epQuienDesbloquea"></div>
+    </div>
+    <div class="field"><label>JIRA</label><input type="text" id="epJira"></div>
+    <div class="field checkbox"><input type="checkbox" id="epCriticoActivo"><label for="epCriticoActivo">Es Crítico Activo (lista de Elkin)</label></div>
+    <div class="field">
+      <label>Bitácora</label>
+      <div id="bitLog"></div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="epBitNota" placeholder="Nueva nota..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;">
+        <button class="btn small" id="btnAddBit">Agregar</button>
+      </div>
+    </div>
+    <div class="hint">Última actualización: <span id="epUltimaAct">-</span></div>
+  </div>
+  <div class="ep-actions">
+    <button class="btn" id="btnSaveCase">Guardar</button>
+    <button class="btn outline" id="btnCancelCase">Cancelar</button>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ================= DATA MODEL ================= */
+const ARANDA_FIELDS = [
+  {key:'noCaso', label:'No. Caso'},
+  {key:'idCompuesto', label:'Id compuesto'},
+  {key:'asunto', label:'Asunto'},
+  {key:'fechaRegistro', label:'Fecha de registro', date:true},
+  {key:'estado', label:'Estado'},
+  {key:'cliente', label:'Cliente'},
+  {key:'categoria', label:'Categoría'},
+  {key:'servicio', label:'Servicio'},
+  {key:'responsable', label:'Responsable'},
+  {key:'autor', label:'Autor'},
+  {key:'razon', label:'Razón'},
+  {key:'impacto', label:'Impacto'},
+  {key:'urgencia', label:'Urgencia'},
+  {key:'prioridad', label:'Prioridad'},
+  {key:'grupo', label:'Grupo'},
+  {key:'compania', label:'Compañía'},
+  {key:'ci', label:'CI'},
+  {key:'tipoRegistro', label:'Tipo de Registro'},
+  {key:'fechaEstimadaSolucion', label:'Fecha Estimada de Solución', date:true},
+  {key:'fechaEstimadaAtencion', label:'Fecha Estimada de Atención', date:true},
+  {key:'jerarquia', label:'Jerarquía'},
+  {key:'departamento', label:'Departamento'},
+  {key:'piso', label:'Piso'},
+  {key:'ciudad', label:'Ciudad'},
+  {key:'pais', label:'País'},
+  {key:'sede', label:'Sede'},
+  {key:'edificio', label:'Edificio'},
+  {key:'tiempoTranscurrido', label:'Tiempo transcurrido'},
+  {key:'progreso', label:'Progreso'}
+];
+const MANUAL_FIELDS = [
+  {key:'tipo', label:'TIPO'},
+  {key:'criticidad', label:'CRITICIDAD'},
+  {key:'mesa', label:'MESA'},
+  {key:'diasEnCola', label:'DIAS EN COLA'},
+  {key:'srlResponsable', label:'SRL RESPONSABLE'},
+  {key:'desarrollador', label:'DESARROLLADOR'},
+  {key:'estadoBau', label:'ESTADO BAU'},
+  {key:'fechaCompromisoProduccion', label:'FECHA COMPROMISO PRODUCCION'},
+  {key:'bloqueador', label:'BLOQUEADOR'},
+  {key:'quienDesbloquea', label:'QUIEN DESBLOQUEA'},
+  {key:'jira', label:'JIRA'},
+  {key:'bitacora', label:'BITACORA'},
+  {key:'esCriticoActivo', label:'ES CRITICO ACTIVO'},
+  {key:'fechaUltimaActualizacion', label:'FECHA ULTIMA ACTUALIZACION'}
+];
+const ALL_FIELDS = ARANDA_FIELDS.concat(MANUAL_FIELDS);
+
+const STATES_KANBAN = ['Registro','Análisis','Desarrollo','Calidad','Pdte Instalación','Bloqueado','Cerrado'];
+const CRITICIDADES = ['Crítica','Alta','Media','Baja'];
+const CRIT_COLORS = {'Crítica':'#d32f2f','Alta':'#f57c00','Media':'#fbc02d','Baja':'#43a047'};
+const MESAS = ['AcselX-AcselWeb','Altamira-SICS-Oasis','APlus'];
+const SRLS = ['José Miguel','Juan Carlos','Cristian Ramírez','Sin asignar'];
+const TIPOS = ['NOVEDAD','INCIDENCIA','MANTENIMIENTO'];
+const ANS_LIMIT = 17;
+
+const ARANDA_HEADER_MAP = {};
+ARANDA_FIELDS.forEach(f=>{ ARANDA_HEADER_MAP[normalize(f.label)] = f.key; });
+
+let casosMap = {};   // noCaso -> caso object
+let activeView = 'import';
+let currentEditingNoCaso = null;
+let kFilters = {mesa:'', crit:'', srl:'', tipo:''};
+let tFilters = {search:'', tipo:'', crit:'', mesa:'', srl:'', estado:''};
+let sortState = {key:'fechaRegistro', dir:'desc'};
+
+/* ================= UTILS ================= */
+function normalize(s){
+  return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function escapeHtml(s){
+  return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toDate(value){
+  if(value===undefined||value===null||value==='') return null;
+  if(value instanceof Date) return isNaN(value.getTime()) ? null : value;
+  if(typeof value === 'number'){
+    const d = new Date(Math.round((value-25569)*86400*1000));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if(typeof value === 'string'){
+    const s = value.trim();
+    if(!s) return null;
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if(m) return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+function toISODate(d){
+  if(!d) return '';
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+function toISODateTime(d){
+  if(!d) return '';
+  return toISODate(d)+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+function formatDate(iso){
+  if(!iso) return '';
+  const parts = iso.split(' ')[0].split('-');
+  if(parts.length!==3) return iso;
+  return parts[2]+'/'+parts[1]+'/'+parts[0];
+}
+function formatDateTime(iso){
+  if(!iso) return '';
+  const [datePart,timePart] = iso.split(' ');
+  return formatDate(datePart)+(timePart?' '+timePart:'');
+}
+function calcDiasEnCola(caso){
+  const fr = toDate(caso.fechaRegistro);
+  if(!fr) return '';
+  const today = new Date();
+  const a = new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  const b = new Date(fr.getFullYear(),fr.getMonth(),fr.getDate());
+  return Math.round((a-b)/86400000);
+}
+function calcMesa(servicio){
+  const s = normalize(servicio);
+  if(/acsel/.test(s)) return 'AcselX-AcselWeb';
+  if(/altamira|sics|oasis/.test(s)) return 'Altamira-SICS-Oasis';
+  if(/aplus/.test(s)) return 'APlus';
+  return '';
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 4500);
+}
+function defaultManualFields(){
+  return {
+    tipo:'', criticidad:'', mesa:'', srlResponsable:'Sin asignar', desarrollador:'',
+    estadoBau:'Registro', fechaCompromisoProduccion:'', bloqueador:'', quienDesbloquea:'',
+    jira:'', bitacora:'', esCriticoActivo:false, fechaUltimaActualizacion:''
+  };
+}
+
+/* ================= PERSISTENCE ================= */
+function saveState(){
+  localStorage.setItem('bau_casos', JSON.stringify(casosMap));
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem('bau_casos');
+    casosMap = raw ? JSON.parse(raw) : {};
+  }catch(e){
+    casosMap = {};
+  }
+}
+
+/* ================= IMPORT ================= */
+function readFileAsArrayBuffer(file){
+  return new Promise((res,rej)=>{
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result);
+    reader.onerror = rej;
+    reader.readAsArrayBuffer(file);
+  });
+}
+async function parseArandaFile(file){
+  const buf = await readFileAsArrayBuffer(file);
+  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, {defval:'', raw:true});
+}
+function mapRowToCaso(row){
+  const caso = {};
+  Object.keys(row).forEach(h=>{
+    const key = ARANDA_HEADER_MAP[normalize(h)];
+    if(key) caso[key] = row[h];
+  });
+  ARANDA_FIELDS.forEach(f=>{
+    if(f.date && caso[f.key]!==undefined){
+      caso[f.key] = toISODate(toDate(caso[f.key]));
+    } else if(caso[f.key]!==undefined && caso[f.key]!==null){
+      caso[f.key] = String(caso[f.key]).trim();
+    }
+  });
+  caso.noCaso = (caso.noCaso||'').trim();
+  return caso;
+}
+async function importFiles(fileList){
+  let nuevos=0, actualizados=0, duplicados=0, invalidos=0;
+  const seenThisImport = new Set();
+  for(const file of fileList){
+    let rows;
+    try{
+      rows = await parseArandaFile(file);
+    }catch(e){
+      showToast('Error leyendo '+file.name+': '+e.message);
+      continue;
+    }
+    rows.forEach(row=>{
+      const parsed = mapRowToCaso(row);
+      if(!parsed.noCaso){ invalidos++; return; }
+      if(seenThisImport.has(parsed.noCaso)){ duplicados++; return; }
+      seenThisImport.add(parsed.noCaso);
+      const mesa = calcMesa(parsed.servicio);
+      const existing = casosMap[parsed.noCaso];
+      if(existing){
+        ARANDA_FIELDS.forEach(f=>{
+          if(parsed[f.key]!==undefined) existing[f.key] = parsed[f.key];
+        });
+        existing.mesa = mesa || existing.mesa;
+        actualizados++;
+      } else {
+        const nuevo = Object.assign(defaultManualFields(), parsed);
+        nuevo.mesa = mesa;
+        casosMap[parsed.noCaso] = nuevo;
+        nuevos++;
+      }
+    });
+  }
+  saveState();
+  populateFilterOptions();
+  renderCurrentView();
+  updateTotalBadge();
+  const summary = document.getElementById('importSummary');
+  summary.innerHTML = '<span class="ok">'+nuevos+' casos importados</span>, '+actualizados+' casos actualizados, '+duplicados+' duplicados ignorados'+(invalidos?(', '+invalidos+' filas inválidas omitidas'):'')+'.';
+  showToast('Importación completa: '+nuevos+' nuevos, '+actualizados+' actualizados, '+duplicados+' duplicados.');
+}
+
+/* ================= FILTER OPTIONS ================= */
+function populateFilterOptions(){
+  fillSelect('kfMesa', MESAS); fillSelect('kfCrit', CRITICIDADES); fillSelect('kfSrl', SRLS); fillSelect('kfTipo', TIPOS);
+  fillSelect('tfTipo', TIPOS); fillSelect('tfCrit', CRITICIDADES); fillSelect('tfMesa', MESAS); fillSelect('tfSrl', SRLS);
+  fillSelect('tfEstado', STATES_KANBAN.concat(['Descartado']));
+}
+function fillSelect(id, values){
+  const sel = document.getElementById(id);
+  const currentVal = sel.value;
+  const firstOption = sel.options[0];
+  sel.innerHTML='';
+  sel.appendChild(firstOption);
+  values.forEach(v=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+  });
+  sel.value = currentVal;
+}
+
+/* ================= NAVIGATION ================= */
+document.querySelectorAll('nav.mainnav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.mainnav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    activeView = btn.dataset.view;
+    document.getElementById('view-'+activeView).classList.add('active');
+    renderCurrentView();
+  });
+});
+function renderCurrentView(){
+  if(activeView==='kanban') renderKanban();
+  else if(activeView==='dashboard') renderDashboard();
+  else if(activeView==='tabla') renderTable();
+}
+function updateTotalBadge(){
+  document.getElementById('totalBadge').textContent = Object.keys(casosMap).length + ' casos';
+}
+
+/* ================= KANBAN ================= */
+function getAllCasos(){ return Object.values(casosMap); }
+function kanbanFilteredCasos(){
+  return getAllCasos().filter(c=>{
+    if(kFilters.mesa && c.mesa!==kFilters.mesa) return false;
+    if(kFilters.crit && c.criticidad!==kFilters.crit) return false;
+    if(kFilters.srl && c.srlResponsable!==kFilters.srl) return false;
+    if(kFilters.tipo && c.tipo!==kFilters.tipo) return false;
+    return true;
+  });
+}
+function renderKanban(){
+  const board = document.getElementById('kanbanBoard');
+  const casos = kanbanFilteredCasos();
+  board.innerHTML = '';
+  STATES_KANBAN.forEach(state=>{
+    const col = document.createElement('div');
+    col.className='kanban-col';
+    const casosCol = casos.filter(c=>c.estadoBau===state);
+    col.innerHTML = '<div class="kanban-col-header"><span>'+escapeHtml(state)+'</span><span class="count">'+casosCol.length+'</span></div><div class="kanban-col-body" data-state="'+escapeHtml(state)+'"></div>';
+    board.appendChild(col);
+    const body = col.querySelector('.kanban-col-body');
+    casosCol.forEach(c=>body.appendChild(buildKanbanCard(c)));
+    body.addEventListener('dragover', e=>{ e.preventDefault(); body.classList.add('dragover'); });
+    body.addEventListener('dragleave', ()=>body.classList.remove('dragover'));
+    body.addEventListener('drop', e=>{
+      e.preventDefault();
+      body.classList.remove('dragover');
+      const noCaso = e.dataTransfer.getData('text/plain');
+      const caso = casosMap[noCaso];
+      if(caso && caso.estadoBau !== state){
+        caso.estadoBau = state;
+        caso.fechaUltimaActualizacion = toISODateTime(new Date());
+        saveState();
+        renderKanban();
+      }
+    });
+  });
+}
+function buildKanbanCard(c){
+  const div = document.createElement('div');
+  div.className='kcard';
+  div.draggable = true;
+  div.style.borderLeftColor = CRIT_COLORS[c.criticidad] || '#999';
+  div.dataset.nocaso = c.noCaso;
+  const asuntoTrunc = (c.asunto||'').length>55 ? c.asunto.slice(0,55)+'…' : (c.asunto||'');
+  const critBadge = c.criticidad ? '<span class="badge" style="background:'+(CRIT_COLORS[c.criticidad]||'#999')+'">'+escapeHtml(c.criticidad)+'</span>' : '';
+  div.innerHTML =
+    '<div class="kc-top"><span>'+escapeHtml(c.noCaso)+'</span>'+
+    '<button class="star-btn" title="Crítico activo">'+(c.esCriticoActivo?'⭐':'☆')+'</button></div>'+
+    '<div class="kc-asunto">'+escapeHtml(asuntoTrunc)+'</div>'+
+    '<div class="kc-meta">'+critBadge+
+    '<span>'+escapeHtml(c.mesa||'-')+'</span>'+
+    '<span>'+calcDiasEnCola(c)+' días</span>'+
+    '<span>'+escapeHtml(c.srlResponsable||'-')+'</span></div>'+
+    (c.bloqueador ? '<div class="kc-bloqueador">⛔ '+escapeHtml(c.bloqueador)+'</div>' : '');
+  div.addEventListener('dragstart', e=>{
+    e.dataTransfer.setData('text/plain', c.noCaso);
+  });
+  div.querySelector('.star-btn').addEventListener('click', e=>{
+    e.stopPropagation();
+    c.esCriticoActivo = !c.esCriticoActivo;
+    c.fechaUltimaActualizacion = toISODateTime(new Date());
+    saveState();
+    renderKanban();
+  });
+  div.addEventListener('click', ()=> openEditPanel(c.noCaso));
+  return div;
+}
+['kfMesa','kfCrit','kfSrl','kfTipo'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', e=>{
+    const map = {kfMesa:'mesa', kfCrit:'crit', kfSrl:'srl', kfTipo:'tipo'};
+    kFilters[map[id]] = e.target.value;
+    renderKanban();
+  });
+});
+
+/* ================= DASHBOARD ================= */
+function isActivo(c){ return c.estadoBau!=='Cerrado' && c.estadoBau!=='Descartado'; }
+function renderDashboard(){
+  const casos = getAllCasos();
+  const activos = casos.filter(isActivo);
+  const incidenciasAbiertas = activos.filter(c=>c.tipo==='INCIDENCIA');
+  const conBloqueador = activos.filter(c=>c.estadoBau==='Bloqueado' || c.bloqueador);
+  const fueraAns = activos.filter(c=>{ const d=calcDiasEnCola(c); return typeof d==='number' && d>ANS_LIMIT; });
+  const criticosActivos = casos.filter(c=>c.esCriticoActivo);
+
+  const kpis = [
+    {label:'Total activos', num:activos.length, alert:false},
+    {label:'Incidencias abiertas', num:incidenciasAbiertas.length, alert:false},
+    {label:'Con bloqueador', num:conBloqueador.length, alert:conBloqueador.length>0},
+    {label:'Fuera de ANS (>'+ANS_LIMIT+' días)', num:fueraAns.length, alert:fueraAns.length>0},
+    {label:'Críticos activos', num:criticosActivos.length, alert:criticosActivos.length>0}
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>
+    '<div class="kpi-card'+(k.alert?' alert':'')+'"><div class="num">'+k.num+'</div><div class="label">'+k.label+'</div></div>'
+  ).join('');
+
+  const tbody = document.querySelector('#semaforoTable tbody');
+  tbody.innerHTML = MESAS.map(mesa=>{
+    const inMesa = activos.filter(c=>c.mesa===mesa);
+    const nov = inMesa.filter(c=>c.tipo==='NOVEDAD').length;
+    const inc = inMesa.filter(c=>c.tipo==='INCIDENCIA').length;
+    const man = inMesa.filter(c=>c.tipo==='MANTENIMIENTO').length;
+    const bloq = inMesa.filter(c=>c.estadoBau==='Bloqueado').length;
+    const dias = inMesa.map(calcDiasEnCola).filter(d=>typeof d==='number');
+    const prom = dias.length ? (dias.reduce((a,b)=>a+b,0)/dias.length) : 0;
+    let alerta='verde', txt='Normal';
+    if(bloq>0){ alerta='rojo'; txt='Bloqueado'; }
+    else if(prom>30){ alerta='amarillo'; txt='Atención'; }
+    return '<tr><td>'+escapeHtml(mesa)+'</td><td>'+nov+'</td><td>'+inc+'</td><td>'+man+'</td><td>'+bloq+'</td><td>'+prom.toFixed(1)+'</td>'+
+      '<td><span class="alert-cell alert-'+alerta+'">'+txt+'</span></td></tr>';
+  }).join('');
+
+  const critList = document.getElementById('criticosList');
+  if(!criticosActivos.length){
+    critList.innerHTML = '<p class="hint">No hay casos marcados como críticos activos.</p>';
+  } else {
+    critList.innerHTML = criticosActivos
+      .sort((a,b)=>calcDiasEnCola(b)-calcDiasEnCola(a))
+      .map(c=>'<div class="crit-list-item"><span><b>'+escapeHtml(c.noCaso)+'</b> — '+escapeHtml((c.asunto||'').slice(0,60))+'</span>'+
+        '<span>'+escapeHtml(c.estadoBau)+' · '+calcDiasEnCola(c)+' días · '+escapeHtml(c.mesa||'-')+'</span></div>').join('');
+  }
+}
+
+/* ================= TABLE VIEW ================= */
+function tableFilteredCasos(){
+  const s = normalize(tFilters.search);
+  return getAllCasos().filter(c=>{
+    if(tFilters.tipo && c.tipo!==tFilters.tipo) return false;
+    if(tFilters.crit && c.criticidad!==tFilters.crit) return false;
+    if(tFilters.mesa && c.mesa!==tFilters.mesa) return false;
+    if(tFilters.srl && c.srlResponsable!==tFilters.srl) return false;
+    if(tFilters.estado && c.estadoBau!==tFilters.estado) return false;
+    if(s){
+      const hay = normalize(c.noCaso)+' '+normalize(c.asunto);
+      if(!hay.includes(s)) return false;
+    }
+    return true;
+  });
+}
+function sortCasos(list){
+  const {key,dir} = sortState;
+  const mult = dir==='asc'?1:-1;
+  return list.slice().sort((a,b)=>{
+    let va = key==='diasEnCola' ? calcDiasEnCola(a) : a[key];
+    let vb = key==='diasEnCola' ? calcDiasEnCola(b) : b[key];
+    va = va===undefined||va===null?'':va;
+    vb = vb===undefined||vb===null?'':vb;
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if(!isNaN(na) && !isNaN(nb) && String(na)===String(va).trim() && String(nb)===String(vb).trim()){
+      return (na-nb)*mult;
+    }
+    return String(va).localeCompare(String(vb),'es',{numeric:true})*mult;
+  });
+}
+function renderTable(){
+  const thead = document.querySelector('#fullTable thead');
+  const tbody = document.querySelector('#fullTable tbody');
+  thead.innerHTML = '<tr>'+ALL_FIELDS.map(f=>{
+    const arrow = sortState.key===f.key ? (sortState.dir==='asc'?' <span class="sort-arrow">▲</span>':' <span class="sort-arrow">▼</span>') : '';
+    return '<th data-key="'+f.key+'">'+escapeHtml(f.label)+arrow+'</th>';
+  }).join('')+'</tr>';
+  thead.querySelectorAll('th').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(sortState.key===key) sortState.dir = sortState.dir==='asc'?'desc':'asc';
+      else { sortState.key = key; sortState.dir='asc'; }
+      renderTable();
+    });
+  });
+  const list = sortCasos(tableFilteredCasos());
+  tbody.innerHTML = list.map(c=>{
+    return '<tr data-nocaso="'+escapeHtml(c.noCaso)+'">'+ALL_FIELDS.map(f=>{
+      let val;
+      if(f.key==='diasEnCola') val = calcDiasEnCola(c);
+      else if(f.key==='esCriticoActivo') val = c.esCriticoActivo ? 'Sí' : 'No';
+      else if(f.key==='fechaRegistro' || f.key==='fechaEstimadaSolucion' || f.key==='fechaEstimadaAtencion' || f.key==='fechaCompromisoProduccion') val = formatDate(c[f.key]);
+      else if(f.key==='fechaUltimaActualizacion') val = formatDateTime(c[f.key]);
+      else if(f.key==='bitacora') val = (c.bitacora||'').split('\n')[0];
+      else val = c[f.key];
+      return '<td>'+escapeHtml(val)+'</td>';
+    }).join('')+'</tr>';
+  }).join('');
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    tr.addEventListener('click', ()=> openEditPanel(tr.dataset.nocaso));
+    tr.style.cursor='pointer';
+  });
+}
+[['tfSearch','search'],['tfTipo','tipo'],['tfCrit','crit'],['tfMesa','mesa'],['tfSrl','srl'],['tfEstado','estado']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('input', e=>{ tFilters[key]=e.target.value; renderTable(); });
+  document.getElementById(id).addEventListener('change', e=>{ tFilters[key]=e.target.value; renderTable(); });
+});
+
+/* ================= EDIT PANEL ================= */
+function openEditPanel(noCaso){
+  const c = casosMap[noCaso];
+  if(!c) return;
+  currentEditingNoCaso = noCaso;
+  document.getElementById('epTitle').textContent = c.noCaso + ' — ' + (c.asunto||'');
+  document.getElementById('epSubtitle').textContent = 'Estado Aranda: '+(c.estado||'-')+' · Servicio: '+(c.servicio||'-');
+  document.getElementById('epArandaGrid').innerHTML = ARANDA_FIELDS.map(f=>{
+    let val = c[f.key];
+    if(f.date) val = formatDate(val);
+    return '<div><b>'+escapeHtml(f.label)+'</b>'+escapeHtml(val)+'</div>';
+  }).join('');
+  document.getElementById('epTipo').value = c.tipo||'';
+  document.getElementById('epCrit').value = c.criticidad||'';
+  document.getElementById('epMesa').value = c.mesa||'';
+  document.getElementById('epSrl').value = c.srlResponsable||'Sin asignar';
+  document.getElementById('epDev').value = c.desarrollador||'';
+  document.getElementById('epEstadoBau').value = c.estadoBau||'Registro';
+  document.getElementById('epFechaCompromiso').value = c.fechaCompromisoProduccion||'';
+  document.getElementById('epBloqueador').value = c.bloqueador||'';
+  document.getElementById('epQuienDesbloquea').value = c.quienDesbloquea||'';
+  document.getElementById('epJira').value = c.jira||'';
+  document.getElementById('epCriticoActivo').checked = !!c.esCriticoActivo;
+  document.getElementById('epBitNota').value = '';
+  document.getElementById('bitLog').textContent = c.bitacora || '(sin notas)';
+  document.getElementById('epUltimaAct').textContent = formatDateTime(c.fechaUltimaActualizacion) || '-';
+  toggleBloqueadorFields();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('editPanel').classList.add('show');
+}
+function closeEditPanel(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('editPanel').classList.remove('show');
+  currentEditingNoCaso = null;
+}
+function toggleBloqueadorFields(){
+  const isBlocked = document.getElementById('epEstadoBau').value === 'Bloqueado';
+  document.getElementById('epBloqueadorWrap').classList.toggle('hidden', !isBlocked);
+}
+document.getElementById('epEstadoBau').addEventListener('change', toggleBloqueadorFields);
+document.getElementById('overlay').addEventListener('click', closeEditPanel);
+document.getElementById('btnCancelCase').addEventListener('click', closeEditPanel);
+document.getElementById('btnAddBit').addEventListener('click', ()=>{
+  const noteInput = document.getElementById('epBitNota');
+  const note = noteInput.value.trim();
+  if(!note) return;
+  const now = new Date();
+  const entry = '<'+pad2(now.getDate())+'/'+pad2(now.getMonth()+1)+'> '+note;
+  const bitLog = document.getElementById('bitLog');
+  const current = bitLog.textContent==='(sin notas)' ? '' : bitLog.textContent;
+  const updated = current ? entry+'\n'+current : entry;
+  bitLog.textContent = updated;
+  bitLog.dataset.value = updated;
+  noteInput.value = '';
+});
+document.getElementById('btnSaveCase').addEventListener('click', ()=>{
+  if(!currentEditingNoCaso) return;
+  const c = casosMap[currentEditingNoCaso];
+  c.tipo = document.getElementById('epTipo').value;
+  c.criticidad = document.getElementById('epCrit').value;
+  c.mesa = document.getElementById('epMesa').value;
+  c.srlResponsable = document.getElementById('epSrl').value;
+  c.desarrollador = document.getElementById('epDev').value.trim();
+  c.estadoBau = document.getElementById('epEstadoBau').value;
+  c.fechaCompromisoProduccion = document.getElementById('epFechaCompromiso').value;
+  c.bloqueador = c.estadoBau==='Bloqueado' ? document.getElementById('epBloqueador').value.trim() : '';
+  c.quienDesbloquea = c.estadoBau==='Bloqueado' ? document.getElementById('epQuienDesbloquea').value.trim() : '';
+  c.jira = document.getElementById('epJira').value.trim();
+  c.esCriticoActivo = document.getElementById('epCriticoActivo').checked;
+  const bitLog = document.getElementById('bitLog');
+  c.bitacora = bitLog.dataset.value!==undefined ? bitLog.dataset.value : (bitLog.textContent==='(sin notas)'?'':bitLog.textContent);
+  c.fechaUltimaActualizacion = toISODateTime(new Date());
+  saveState();
+  closeEditPanel();
+  populateFilterOptions();
+  renderCurrentView();
+  updateTotalBadge();
+  showToast('Caso '+c.noCaso+' actualizado.');
+});
+
+/* ================= FILE INPUTS ================= */
+document.getElementById('fileInput').addEventListener('change', async e=>{
+  const files = Array.from(e.target.files);
+  if(!files.length) return;
+  await importFiles(files);
+  e.target.value = '';
+});
+document.getElementById('backupInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      const nuevoMap = data.casos || data;
+      if(typeof nuevoMap !== 'object') throw new Error('Formato inválido');
+      if(!confirm('Esto reemplazará todos los casos actuales en este navegador por los del backup. ¿Continuar?')) return;
+      casosMap = nuevoMap;
+      saveState();
+      populateFilterOptions();
+      renderCurrentView();
+      updateTotalBadge();
+      showToast('Backup restaurado correctamente.');
+    }catch(err){
+      showToast('Error al leer el backup: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('btnExportBackup').addEventListener('click', ()=>{
+  const data = {exportedAt: new Date().toString(), casos: casosMap};
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  a.href = url;
+  a.download = 'bau_backup_'+now.getFullYear()+pad2(now.getMonth()+1)+pad2(now.getDate())+'_'+pad2(now.getHours())+pad2(now.getMinutes())+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ================= EXPORT EXCEL ================= */
+document.getElementById('btnExportExcel').addEventListener('click', ()=>{
+  const casos = getAllCasos();
+  const data = casos.map(c=>{
+    const row = {};
+    ALL_FIELDS.forEach(f=>{
+      let val;
+      if(f.key==='diasEnCola') val = calcDiasEnCola(c);
+      else if(f.key==='esCriticoActivo') val = c.esCriticoActivo ? 'Sí' : 'No';
+      else if(['fechaRegistro','fechaEstimadaSolucion','fechaEstimadaAtencion','fechaCompromisoProduccion'].includes(f.key)) val = formatDate(c[f.key]);
+      else if(f.key==='fechaUltimaActualizacion') val = formatDateTime(c[f.key]);
+      else val = c[f.key];
+      row[f.label] = val===undefined||val===null?'':val;
+    });
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Casos BAU');
+  const now = new Date();
+  XLSX.writeFile(wb, 'BAU_Casos_'+now.getFullYear()+pad2(now.getMonth()+1)+pad2(now.getDate())+'.xlsx');
+});
+
+/* ================= INIT ================= */
+loadState();
+populateFilterOptions();
+updateTotalBadge();
+renderCurrentView();
+</script>
+</body>
+</html>
