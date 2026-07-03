@@ -158,6 +158,10 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <div class="filtergroup"><label>Criticidad</label><select id="kfCrit"><option value="">Todas</option></select></div>
       <div class="filtergroup"><label>SRL</label><select id="kfSrl"><option value="">Todos</option></select></div>
       <div class="filtergroup"><label>Tipo</label><select id="kfTipo"><option value="">Todos</option></select></div>
+      <div class="filtergroup" style="justify-content:flex-end;flex-direction:row;align-items:center;gap:6px;margin-top:18px;">
+        <input type="checkbox" id="kfMostrarCerrados">
+        <label for="kfMostrarCerrados" style="font-size:13px;color:var(--text);cursor:pointer;">Mostrar cerrados</label>
+      </div>
     </div>
     <div class="kanban-board" id="kanbanBoard"></div>
   </section>
@@ -470,6 +474,14 @@ async function importFiles(fileList){
       } else {
         const nuevo = Object.assign(defaultManualFields(), parsed);
         nuevo.mesa = mesa;
+        const ESTADO_MAP = {
+          'cerrado':'Cerrado','solucionado':'Cerrado','informativo':'Cerrado',
+          'devolucionporfaltadesoportes':'Cerrado',
+          'postproduccion':'Pdte Instalación','soporte':'Análisis',
+          'incidencias':'Análisis','registroyvalidacion':'Registro'
+        };
+        const estadoNorm = normalize(parsed.estado||'');
+        nuevo.estadoBau = ESTADO_MAP[estadoNorm] || 'Registro';
         casosMap[parsed.noCaso] = nuevo;
         nuevos++;
       }
@@ -525,7 +537,9 @@ function updateTotalBadge(){
 /* ================= KANBAN ================= */
 function getAllCasos(){ return Object.values(casosMap); }
 function kanbanFilteredCasos(){
+  const mostrarCerrados = document.getElementById('kfMostrarCerrados').checked;
   return getAllCasos().filter(c=>{
+    if(!mostrarCerrados && (c.estadoBau==='Cerrado' || c.estadoBau==='Descartado')) return false;
     if(kFilters.mesa && c.mesa!==kFilters.mesa) return false;
     if(kFilters.crit && c.criticidad!==kFilters.crit) return false;
     if(kFilters.srl && c.srlResponsable!==kFilters.srl) return false;
@@ -535,9 +549,11 @@ function kanbanFilteredCasos(){
 }
 function renderKanban(){
   const board = document.getElementById('kanbanBoard');
+  const mostrarCerrados = document.getElementById('kfMostrarCerrados').checked;
   const casos = kanbanFilteredCasos();
   board.innerHTML = '';
-  STATES_KANBAN.forEach(state=>{
+  const statesVisible = mostrarCerrados ? STATES_KANBAN : STATES_KANBAN.filter(s=>s!=='Cerrado');
+  statesVisible.forEach(state=>{
     const col = document.createElement('div');
     col.className='kanban-col';
     const casosCol = casos.filter(c=>c.estadoBau===state);
@@ -573,6 +589,7 @@ function buildKanbanCard(c){
     '<div class="kc-top"><span>'+escapeHtml(c.noCaso)+'</span>'+
     '<button class="star-btn" title="Crítico activo">'+(c.esCriticoActivo?'⭐':'☆')+'</button></div>'+
     '<div class="kc-asunto">'+escapeHtml(asuntoTrunc)+'</div>'+
+    '<span style="font-size:10px;color:#8a97a5;">Aranda: '+escapeHtml(c.estado||'-')+'</span>'+
     '<div class="kc-meta">'+critBadge+
     '<span>'+escapeHtml(c.mesa||'-')+'</span>'+
     '<span>'+calcDiasEnCola(c)+' días</span>'+
@@ -598,6 +615,7 @@ function buildKanbanCard(c){
     renderKanban();
   });
 });
+document.getElementById('kfMostrarCerrados').addEventListener('change', ()=>renderKanban());
 
 /* ================= DASHBOARD ================= */
 function isActivo(c){ return c.estadoBau!=='Cerrado' && c.estadoBau!=='Descartado'; }
