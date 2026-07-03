@@ -483,6 +483,11 @@ async function importFiles(fileList){
         };
         const estadoNorm = normalize(parsed.estado||'');
         nuevo.estadoBau = ESTADO_MAP[estadoNorm] || 'Registro';
+        const SRL_MAP = {
+          'AcselX':'José Miguel','AcselWeb':'José Miguel',
+          'Altamira-SICS-Oasis':'Juan Carlos','APlus':'Cristian Ramírez'
+        };
+        nuevo.srlResponsable = SRL_MAP[nuevo.mesa] || 'Sin asignar';
         casosMap[parsed.noCaso] = nuevo;
         nuevos++;
       }
