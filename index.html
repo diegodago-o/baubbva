@@ -221,6 +221,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     <div class="field"><label>Mesa</label>
       <select id="epMesa"><option value="">-- Seleccionar --</option><option>AcselX</option><option>AcselWeb</option><option>Altamira</option><option>SICS</option><option>Oasis</option><option>APlus</option></select>
     </div>
+    <div class="field"><label>Tech Manager</label><input type="text" id="epTechManager" readonly style="background:#f7f9fb;color:#5b6b7c;"></div>
     <div class="field"><label>SRL Responsable</label>
       <select id="epSrl"><option>Sin asignar</option><option>José Miguel</option><option>Juan Carlos</option><option>Cristian Ramírez</option></select>
     </div>
@@ -293,9 +294,11 @@ const ARANDA_FIELDS = [
 ];
 const MANUAL_FIELDS = [
   {key:'tipo', label:'TIPO'},
+  {key:'tipoOriginal', label:'TIPO ORIGINAL'},
   {key:'criticidad', label:'CRITICIDAD'},
   {key:'mesa', label:'MESA'},
   {key:'diasEnCola', label:'DIAS EN COLA'},
+  {key:'techManager', label:'TECH MANAGER'},
   {key:'srlResponsable', label:'SRL RESPONSABLE'},
   {key:'desarrollador', label:'DESARROLLADOR'},
   {key:'estadoBau', label:'ESTADO BAU'},
@@ -400,7 +403,8 @@ function showToast(msg){
 }
 function defaultManualFields(){
   return {
-    tipo:'', criticidad:'', mesa:'', srlResponsable:'Sin asignar', desarrollador:'',
+    tipo:'NOVEDAD', tipoOriginal:'NOVEDAD', criticidad:'', mesa:'', techManager:'Diego González',
+    srlResponsable:'Sin asignar', desarrollador:'',
     estadoBau:'Registro', fechaCompromisoProduccion:'', bloqueador:'', quienDesbloquea:'',
     jira:'', bitacora:'', esCriticoActivo:false, fechaUltimaActualizacion:''
   };
@@ -755,6 +759,7 @@ function openEditPanel(noCaso){
     if(f.date) val = formatDate(val);
     return '<div><b>'+escapeHtml(f.label)+'</b>'+escapeHtml(val)+'</div>';
   }).join('');
+  document.getElementById('epTechManager').value = c.techManager||'Diego González';
   document.getElementById('epTipo').value = c.tipo||'';
   document.getElementById('epCrit').value = c.criticidad||'';
   document.getElementById('epMesa').value = c.mesa||'';
@@ -801,7 +806,18 @@ document.getElementById('btnAddBit').addEventListener('click', ()=>{
 document.getElementById('btnSaveCase').addEventListener('click', ()=>{
   if(!currentEditingNoCaso) return;
   const c = casosMap[currentEditingNoCaso];
-  c.tipo = document.getElementById('epTipo').value;
+  const tipoAnterior = c.tipo;
+  const tipoNuevo = document.getElementById('epTipo').value;
+  c.tipo = tipoNuevo;
+  if(tipoNuevo && tipoAnterior && tipoNuevo !== tipoAnterior){
+    const now = new Date();
+    const entry = '<'+pad2(now.getDate())+'/'+pad2(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad2(now.getHours())+':'+pad2(now.getMinutes())+'> Tipo cambiado: '+tipoAnterior+' → '+tipoNuevo;
+    const bitLog = document.getElementById('bitLog');
+    const current = (bitLog.dataset.value !== undefined ? bitLog.dataset.value : bitLog.textContent) === '(sin notas)' ? '' : (bitLog.dataset.value !== undefined ? bitLog.dataset.value : bitLog.textContent);
+    const updated = current ? entry+'\n'+current : entry;
+    bitLog.textContent = updated;
+    bitLog.dataset.value = updated;
+  }
   c.criticidad = document.getElementById('epCrit').value;
   c.mesa = document.getElementById('epMesa').value;
   c.srlResponsable = document.getElementById('epSrl').value;
