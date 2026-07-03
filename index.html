@@ -219,7 +219,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <select id="epCrit"><option value="">-- Seleccionar --</option><option>Crítica</option><option>Alta</option><option>Media</option><option>Baja</option></select>
     </div>
     <div class="field"><label>Mesa</label>
-      <select id="epMesa"><option value="">-- Seleccionar --</option><option>AcselX</option><option>AcselWeb</option><option>Altamira-SICS-Oasis</option><option>APlus</option></select>
+      <select id="epMesa"><option value="">-- Seleccionar --</option><option>AcselX</option><option>AcselWeb</option><option>Altamira</option><option>SICS</option><option>Oasis</option><option>APlus</option></select>
     </div>
     <div class="field"><label>SRL Responsable</label>
       <select id="epSrl"><option>Sin asignar</option><option>José Miguel</option><option>Juan Carlos</option><option>Cristian Ramírez</option></select>
@@ -312,7 +312,7 @@ const ALL_FIELDS = ARANDA_FIELDS.concat(MANUAL_FIELDS);
 const STATES_KANBAN = ['Registro','Análisis','Desarrollo','Calidad','Pdte Instalación','Bloqueado','Cerrado'];
 const CRITICIDADES = ['Crítica','Alta','Media','Baja'];
 const CRIT_COLORS = {'Crítica':'#d32f2f','Alta':'#f57c00','Media':'#fbc02d','Baja':'#43a047'};
-const MESAS = ['AcselX','AcselWeb','Altamira-SICS-Oasis','APlus'];
+const MESAS = ['AcselX','AcselWeb','Altamira','SICS','Oasis','APlus'];
 const SRLS = ['José Miguel','Juan Carlos','Cristian Ramírez','Sin asignar'];
 const TIPOS = ['NOVEDAD','INCIDENCIA','MANTENIMIENTO'];
 const ANS_LIMIT = 17;
@@ -385,7 +385,9 @@ function calcMesa(servicio){
   const s = normalize(servicio);
   if(/acsel/.test(s) && /web/.test(s)) return 'AcselWeb';
   if(/acsel/.test(s)) return 'AcselX';
-  if(/altamira|sics|oasis/.test(s)) return 'Altamira-SICS-Oasis';
+  if(/altamira/.test(s)) return 'Altamira';
+  if(/sics/.test(s)) return 'SICS';
+  if(/oasis/.test(s)) return 'Oasis';
   if(/aplus/.test(s)) return 'APlus';
   return '';
 }
@@ -485,7 +487,8 @@ async function importFiles(fileList){
         nuevo.estadoBau = ESTADO_MAP[estadoNorm] || 'Registro';
         const SRL_MAP = {
           'AcselX':'José Miguel','AcselWeb':'José Miguel',
-          'Altamira-SICS-Oasis':'Juan Carlos','APlus':'Cristian Ramírez'
+          'Altamira':'Juan Carlos','SICS':'Juan Carlos','Oasis':'Juan Carlos',
+          'APlus':'Cristian Ramírez'
         };
         nuevo.srlResponsable = SRL_MAP[nuevo.mesa] || 'Sin asignar';
         casosMap[parsed.noCaso] = nuevo;
