@@ -225,7 +225,10 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     <div class="field"><label>SRL Responsable</label>
       <select id="epSrl"><option>Sin asignar</option><option>José Miguel</option><option>Juan Carlos</option><option>Cristian Ramírez</option></select>
     </div>
-    <div class="field"><label>Desarrollador</label><input type="text" id="epDev"></div>
+    <div class="field"><label>Desarrollador</label>
+      <input type="text" id="epDev" list="devList" autocomplete="off">
+      <datalist id="devList"></datalist>
+    </div>
     <div class="field"><label>Estado BAU</label>
       <select id="epEstadoBau">
         <option>Registro</option><option>Análisis</option><option>Desarrollo</option><option>Calidad</option>
@@ -495,6 +498,7 @@ async function importFiles(fileList){
           'APlus':'Cristian Ramírez'
         };
         nuevo.srlResponsable = SRL_MAP[nuevo.mesa] || 'Sin asignar';
+        nuevo.desarrollador = parsed.responsable || '';
         casosMap[parsed.noCaso] = nuevo;
         nuevos++;
       }
@@ -748,6 +752,12 @@ function renderTable(){
 });
 
 /* ================= EDIT PANEL ================= */
+function populateDevList(){
+  const seen = new Set();
+  getAllCasos().forEach(c=>{ if(c.responsable) seen.add(c.responsable); if(c.desarrollador) seen.add(c.desarrollador); });
+  const dl = document.getElementById('devList');
+  dl.innerHTML = [...seen].sort().map(v=>'<option value="'+escapeHtml(v)+'">').join('');
+}
 function openEditPanel(noCaso){
   const c = casosMap[noCaso];
   if(!c) return;
@@ -759,6 +769,7 @@ function openEditPanel(noCaso){
     if(f.date) val = formatDate(val);
     return '<div><b>'+escapeHtml(f.label)+'</b>'+escapeHtml(val)+'</div>';
   }).join('');
+  populateDevList();
   document.getElementById('epTechManager').value = c.techManager||'Diego González';
   document.getElementById('epTipo').value = c.tipo||'';
   document.getElementById('epCrit').value = c.criticidad||'';
