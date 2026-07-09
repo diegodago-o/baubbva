@@ -169,6 +169,10 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
   <!-- ============ DASHBOARD VIEW ============ -->
   <section id="view-dashboard" class="view">
     <h2 class="section-title">Dashboard Ejecutivo</h2>
+    <div class="card" style="margin-bottom:16px;border-top:4px solid #c0392b;">
+      <h2 class="section-title" style="margin-top:0;">Críticos Activos</h2>
+      <div id="criticosList"></div>
+    </div>
     <div class="kpi-grid" id="kpiGrid"></div>
     <div class="card" style="margin-bottom:16px;">
       <h2 class="section-title" style="margin-top:0;">Semáforo por Mesa</h2>
@@ -176,10 +180,6 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
         <thead><tr><th>Mesa</th><th>Novedades</th><th>Incidencias</th><th>Mantenimientos</th><th>Bloqueados</th><th>Días prom. en cola</th><th>Alerta</th></tr></thead>
         <tbody></tbody>
       </table>
-    </div>
-    <div class="card">
-      <h2 class="section-title" style="margin-top:0;">Críticos Activos</h2>
-      <div id="criticosList"></div>
     </div>
   </section>
 
@@ -213,7 +213,12 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     </details>
 
     <div class="field"><label>Tipo</label>
-      <select id="epTipo"><option value="">-- Seleccionar --</option><option>NOVEDAD</option><option>INCIDENCIA</option><option>MANTENIMIENTO</option></select>
+      <select id="epTipo">
+        <option value="">-- Seleccionar --</option>
+        <option>Novedad T1</option><option>Novedad T2</option><option>Novedad T3</option>
+        <option>Incidencia Crítica</option><option>Incidencia Funcional</option><option>Incidencia Operativa</option>
+        <option>Mantenimiento</option>
+      </select>
     </div>
     <div class="field"><label>Criticidad</label>
       <select id="epCrit"><option value="">-- Seleccionar --</option><option>Crítica</option><option>Alta</option><option>Media</option><option>Baja</option></select>
@@ -222,12 +227,9 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <select id="epMesa"><option value="">-- Seleccionar --</option><option>AcselX</option><option>AcselWeb</option><option>Altamira</option><option>SICS</option><option>Oasis</option><option>APlus</option></select>
     </div>
     <div class="field"><label>Tech Manager</label><input type="text" id="epTechManager" readonly style="background:#f7f9fb;color:#5b6b7c;"></div>
+    <div class="field"><label>Responsable (Aranda)</label><input type="text" id="epResponsable" readonly style="background:#f7f9fb;color:#5b6b7c;"></div>
     <div class="field"><label>SRL Responsable</label>
       <select id="epSrl"><option>Sin asignar</option><option>José Miguel</option><option>Juan Carlos</option><option>Cristian Ramírez</option></select>
-    </div>
-    <div class="field"><label>Desarrollador</label>
-      <input type="text" id="epDev" list="devList" autocomplete="off">
-      <datalist id="devList"></datalist>
     </div>
     <div class="field"><label>Estado BAU</label>
       <select id="epEstadoBau">
@@ -241,6 +243,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <div class="field"><label>Quién desbloquea</label><input type="text" id="epQuienDesbloquea"></div>
     </div>
     <div class="field"><label>JIRA</label><input type="text" id="epJira"></div>
+    <div class="field"><label>Próximo paso</label><input type="text" id="epProximoPaso" placeholder="¿Qué sigue?"></div>
     <div class="field checkbox"><input type="checkbox" id="epCriticoActivo"><label for="epCriticoActivo">Es Crítico Activo (lista de Elkin)</label></div>
     <div class="field">
       <label>Bitácora</label>
@@ -298,17 +301,18 @@ const ARANDA_FIELDS = [
 const MANUAL_FIELDS = [
   {key:'tipo', label:'TIPO'},
   {key:'tipoOriginal', label:'TIPO ORIGINAL'},
+  {key:'ansSLA', label:'ANS SLA (h)'},
   {key:'criticidad', label:'CRITICIDAD'},
   {key:'mesa', label:'MESA'},
   {key:'diasEnCola', label:'DIAS EN COLA'},
   {key:'techManager', label:'TECH MANAGER'},
   {key:'srlResponsable', label:'SRL RESPONSABLE'},
-  {key:'desarrollador', label:'DESARROLLADOR'},
   {key:'estadoBau', label:'ESTADO BAU'},
   {key:'fechaCompromisoProduccion', label:'FECHA COMPROMISO PRODUCCION'},
   {key:'bloqueador', label:'BLOQUEADOR'},
   {key:'quienDesbloquea', label:'QUIEN DESBLOQUEA'},
   {key:'jira', label:'JIRA'},
+  {key:'proximoPaso', label:'PROXIMO PASO'},
   {key:'bitacora', label:'BITACORA'},
   {key:'esCriticoActivo', label:'ES CRITICO ACTIVO'},
   {key:'fechaUltimaActualizacion', label:'FECHA ULTIMA ACTUALIZACION'}
@@ -320,8 +324,10 @@ const CRITICIDADES = ['Crítica','Alta','Media','Baja'];
 const CRIT_COLORS = {'Crítica':'#d32f2f','Alta':'#f57c00','Media':'#fbc02d','Baja':'#43a047'};
 const MESAS = ['AcselX','AcselWeb','Altamira','SICS','Oasis','APlus'];
 const SRLS = ['José Miguel','Juan Carlos','Cristian Ramírez','Sin asignar'];
-const TIPOS = ['NOVEDAD','INCIDENCIA','MANTENIMIENTO'];
-const ANS_LIMIT = 17;
+const TIPOS = ['Novedad T1','Novedad T2','Novedad T3','Incidencia Crítica','Incidencia Funcional','Incidencia Operativa','Mantenimiento'];
+const SLA_HORAS = {'Novedad T1':13,'Novedad T2':28,'Novedad T3':43,'Incidencia Crítica':36,'Incidencia Funcional':90,'Incidencia Operativa':70,'Mantenimiento':112};
+function calcAnsSLA(tipo){ return SLA_HORAS[tipo] || null; }
+function isFueraAns(caso){ const d=calcDiasEnCola(caso); const s=calcAnsSLA(caso.tipo); return typeof d==='number' && s ? (d*8)>s : false; }
 
 const ARANDA_HEADER_MAP = {};
 ARANDA_FIELDS.forEach(f=>{ ARANDA_HEADER_MAP[normalize(f.label)] = f.key; });
@@ -406,10 +412,10 @@ function showToast(msg){
 }
 function defaultManualFields(){
   return {
-    tipo:'NOVEDAD', tipoOriginal:'NOVEDAD', criticidad:'', mesa:'', techManager:'Diego González',
-    srlResponsable:'Sin asignar', desarrollador:'',
+    tipo:'Novedad T1', tipoOriginal:'Novedad T1', ansSLA:13, criticidad:'', mesa:'',
+    techManager:'Diego González', srlResponsable:'Sin asignar',
     estadoBau:'Registro', fechaCompromisoProduccion:'', bloqueador:'', quienDesbloquea:'',
-    jira:'', bitacora:'', esCriticoActivo:false, fechaUltimaActualizacion:''
+    jira:'', proximoPaso:'', bitacora:'', esCriticoActivo:false, fechaUltimaActualizacion:''
   };
 }
 
@@ -486,7 +492,7 @@ async function importFiles(fileList){
         nuevo.mesa = mesa;
         const ESTADO_MAP = {
           'cerrado':'Cerrado','solucionado':'Cerrado','informativo':'Cerrado',
-          'devolucionporfaltadesoportes':'Registro',
+          'devolucionporfaltadesoportes':'Cerrado',
           'postproduccion':'Pdte Instalación','soporte':'Análisis',
           'incidencias':'Análisis','registroyvalidacion':'Registro'
         };
@@ -498,7 +504,7 @@ async function importFiles(fileList){
           'APlus':'Cristian Ramírez'
         };
         nuevo.srlResponsable = SRL_MAP[nuevo.mesa] || 'Sin asignar';
-        nuevo.desarrollador = parsed.responsable || '';
+        nuevo.ansSLA = calcAnsSLA(nuevo.tipo) || 13;
         casosMap[parsed.noCaso] = nuevo;
         nuevos++;
       }
@@ -606,7 +612,7 @@ function buildKanbanCard(c){
     '<div class="kc-top"><span>'+escapeHtml(c.noCaso)+'</span>'+
     '<button class="star-btn" title="Crítico activo">'+(c.esCriticoActivo?'⭐':'☆')+'</button></div>'+
     '<div class="kc-asunto">'+escapeHtml(asuntoTrunc)+'</div>'+
-    '<span style="font-size:10px;color:#8a97a5;">Aranda: '+escapeHtml(c.estado||'-')+'</span>'+
+    '<span style="font-size:10px;color:#8a97a5;">Aranda: '+escapeHtml(c.estado||'-')+' · '+escapeHtml(c.tipoRegistro||'-')+'</span>'+
     '<div class="kc-meta">'+critBadge+
     '<span>'+escapeHtml(c.mesa||'-')+'</span>'+
     '<span>'+calcDiasEnCola(c)+' días</span>'+
@@ -639,16 +645,16 @@ function isActivo(c){ return c.estadoBau!=='Cerrado' && c.estadoBau!=='Descartad
 function renderDashboard(){
   const casos = getAllCasos();
   const activos = casos.filter(isActivo);
-  const incidenciasAbiertas = activos.filter(c=>c.tipo==='INCIDENCIA');
+  const incidenciasAbiertas = activos.filter(c=>(c.tipo||'').startsWith('Incidencia'));
   const conBloqueador = activos.filter(c=>c.estadoBau==='Bloqueado' || c.bloqueador);
-  const fueraAns = activos.filter(c=>{ const d=calcDiasEnCola(c); return typeof d==='number' && d>ANS_LIMIT; });
+  const fueraAns = activos.filter(isFueraAns);
   const criticosActivos = casos.filter(c=>c.esCriticoActivo);
 
   const kpis = [
     {label:'Total activos', num:activos.length, alert:false},
     {label:'Incidencias abiertas', num:incidenciasAbiertas.length, alert:false},
     {label:'Con bloqueador', num:conBloqueador.length, alert:conBloqueador.length>0},
-    {label:'Fuera de ANS (>'+ANS_LIMIT+' días)', num:fueraAns.length, alert:fueraAns.length>0},
+    {label:'Fuera de ANS', num:fueraAns.length, alert:fueraAns.length>0},
     {label:'Críticos activos', num:criticosActivos.length, alert:criticosActivos.length>0}
   ];
   document.getElementById('kpiGrid').innerHTML = kpis.map(k=>
@@ -658,9 +664,9 @@ function renderDashboard(){
   const tbody = document.querySelector('#semaforoTable tbody');
   tbody.innerHTML = MESAS.map(mesa=>{
     const inMesa = activos.filter(c=>c.mesa===mesa);
-    const nov = inMesa.filter(c=>c.tipo==='NOVEDAD').length;
-    const inc = inMesa.filter(c=>c.tipo==='INCIDENCIA').length;
-    const man = inMesa.filter(c=>c.tipo==='MANTENIMIENTO').length;
+    const nov = inMesa.filter(c=>(c.tipo||'').startsWith('Novedad')).length;
+    const inc = inMesa.filter(c=>(c.tipo||'').startsWith('Incidencia')).length;
+    const man = inMesa.filter(c=>c.tipo==='Mantenimiento').length;
     const bloq = inMesa.filter(c=>c.estadoBau==='Bloqueado').length;
     const dias = inMesa.map(calcDiasEnCola).filter(d=>typeof d==='number');
     const prom = dias.length ? (dias.reduce((a,b)=>a+b,0)/dias.length) : 0;
@@ -677,8 +683,9 @@ function renderDashboard(){
   } else {
     critList.innerHTML = criticosActivos
       .sort((a,b)=>calcDiasEnCola(b)-calcDiasEnCola(a))
-      .map(c=>'<div class="crit-list-item"><span><b>'+escapeHtml(c.noCaso)+'</b> — '+escapeHtml((c.asunto||'').slice(0,60))+'</span>'+
-        '<span>'+escapeHtml(c.estadoBau)+' · '+calcDiasEnCola(c)+' días · '+escapeHtml(c.mesa||'-')+'</span></div>').join('');
+      .map(c=>'<div class="crit-list-item"><span><b>'+escapeHtml(c.noCaso)+'</b> — '+escapeHtml((c.asunto||'').slice(0,60))+
+        (c.proximoPaso?'<br><span style="font-size:11px;color:#004481;">▶ '+escapeHtml(c.proximoPaso)+'</span>':'')+
+        '</span><span style="text-align:right;">'+escapeHtml(c.estadoBau)+' · '+calcDiasEnCola(c)+' días<br>'+escapeHtml(c.mesa||'-')+'</span></div>').join('');
   }
 }
 
@@ -752,12 +759,6 @@ function renderTable(){
 });
 
 /* ================= EDIT PANEL ================= */
-function populateDevList(){
-  const seen = new Set();
-  getAllCasos().forEach(c=>{ if(c.responsable) seen.add(c.responsable); if(c.desarrollador) seen.add(c.desarrollador); });
-  const dl = document.getElementById('devList');
-  dl.innerHTML = [...seen].sort().map(v=>'<option value="'+escapeHtml(v)+'">').join('');
-}
 function openEditPanel(noCaso){
   const c = casosMap[noCaso];
   if(!c) return;
@@ -769,18 +770,18 @@ function openEditPanel(noCaso){
     if(f.date) val = formatDate(val);
     return '<div><b>'+escapeHtml(f.label)+'</b>'+escapeHtml(val)+'</div>';
   }).join('');
-  populateDevList();
   document.getElementById('epTechManager').value = c.techManager||'Diego González';
+  document.getElementById('epResponsable').value = c.responsable||'';
   document.getElementById('epTipo').value = c.tipo||'';
   document.getElementById('epCrit').value = c.criticidad||'';
   document.getElementById('epMesa').value = c.mesa||'';
   document.getElementById('epSrl').value = c.srlResponsable||'Sin asignar';
-  document.getElementById('epDev').value = c.desarrollador||'';
   document.getElementById('epEstadoBau').value = c.estadoBau||'Registro';
   document.getElementById('epFechaCompromiso').value = c.fechaCompromisoProduccion||'';
   document.getElementById('epBloqueador').value = c.bloqueador||'';
   document.getElementById('epQuienDesbloquea').value = c.quienDesbloquea||'';
   document.getElementById('epJira').value = c.jira||'';
+  document.getElementById('epProximoPaso').value = c.proximoPaso||'';
   document.getElementById('epCriticoActivo').checked = !!c.esCriticoActivo;
   document.getElementById('epBitNota').value = '';
   document.getElementById('bitLog').textContent = c.bitacora || '(sin notas)';
@@ -829,15 +830,16 @@ document.getElementById('btnSaveCase').addEventListener('click', ()=>{
     bitLog.textContent = updated;
     bitLog.dataset.value = updated;
   }
+  c.ansSLA = calcAnsSLA(c.tipo) || c.ansSLA || 13;
   c.criticidad = document.getElementById('epCrit').value;
   c.mesa = document.getElementById('epMesa').value;
   c.srlResponsable = document.getElementById('epSrl').value;
-  c.desarrollador = document.getElementById('epDev').value.trim();
   c.estadoBau = document.getElementById('epEstadoBau').value;
   c.fechaCompromisoProduccion = document.getElementById('epFechaCompromiso').value;
   c.bloqueador = c.estadoBau==='Bloqueado' ? document.getElementById('epBloqueador').value.trim() : '';
   c.quienDesbloquea = c.estadoBau==='Bloqueado' ? document.getElementById('epQuienDesbloquea').value.trim() : '';
   c.jira = document.getElementById('epJira').value.trim();
+  c.proximoPaso = document.getElementById('epProximoPaso').value.trim();
   c.esCriticoActivo = document.getElementById('epCriticoActivo').checked;
   const bitLog = document.getElementById('bitLog');
   c.bitacora = bitLog.dataset.value!==undefined ? bitLog.dataset.value : (bitLog.textContent==='(sin notas)'?'':bitLog.textContent);
