@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mesa BAU - BBVA Seguros Colombia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --navy:#072146;
@@ -113,6 +114,19 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
 #bitLog{white-space:pre-wrap;background:#f7f9fb;border-radius:6px;padding:8px;font-size:12px;max-height:100px;overflow-y:auto;margin-bottom:6px;}
 .hidden{display:none !important;}
 .hint{font-size:11px;color:#8a97a5;margin-top:-6px;margin-bottom:10px;}
+/* ---------- Analítica ---------- */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.chart-grid.single{grid-template-columns:1fr;}
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.chart-card h3{font-size:14px;font-weight:bold;color:var(--navy);margin:0 0 12px;border-left:3px solid var(--teal);padding-left:8px;}
+.chart-wrap{position:relative;height:240px;}
+/* ---------- Reportes ---------- */
+.rpt-actions{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;}
+.rpt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;}
+.rpt-summary-card{background:var(--azul);color:#fff;border-radius:8px;padding:12px 16px;text-align:center;}
+.rpt-summary-card .n{font-size:28px;font-weight:bold;}
+.rpt-summary-card .l{font-size:11px;margin-top:2px;opacity:.85;}
+@media print{header,nav,.filterbar,.ep-actions,#overlay,#editPanel,.btn,.rpt-actions{display:none!important;} .view{display:block!important;} body{background:#fff;}}
 </style>
 </head>
 <body>
@@ -124,6 +138,8 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     <button data-view="kanban">Kanban</button>
     <button data-view="dashboard">Dashboard</button>
     <button data-view="tabla">Tabla</button>
+    <button data-view="analitica">Analítica</button>
+    <button data-view="reportes">Reportes</button>
   </nav>
   <div class="badge-total" id="totalBadge">0 casos</div>
 </header>
@@ -196,6 +212,51 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <div class="filtergroup" style="justify-content:flex-end;"><button class="btn teal" id="btnExportExcel">Exportar a Excel</button></div>
     </div>
     <div class="table-scroll"><table id="fullTable"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <!-- ============ ANALÍTICA VIEW ============ -->
+  <section id="view-analitica" class="view">
+    <h2 class="section-title">Analítica</h2>
+    <div class="kpi-grid" id="anaKpiGrid"></div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Distribución por Estado BAU</h3><div class="chart-wrap"><canvas id="chartEstado"></canvas></div></div>
+      <div class="chart-card"><h3>Casos activos por Mesa</h3><div class="chart-wrap"><canvas id="chartMesa"></canvas></div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Distribución por Tipo</h3><div class="chart-wrap"><canvas id="chartTipo"></canvas></div></div>
+      <div class="chart-card"><h3>Evolución mensual de registros</h3><div class="chart-wrap"><canvas id="chartEvolucion"></canvas></div></div>
+    </div>
+    <div class="chart-grid single">
+      <div class="chart-card"><h3>ANS por Mesa — A tiempo vs Fuera</h3><div class="chart-wrap"><canvas id="chartAns"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- ============ REPORTES VIEW ============ -->
+  <section id="view-reportes" class="view">
+    <h2 class="section-title">Reportes</h2>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="filterbar">
+        <div class="filtergroup"><label>Tipo de reporte</label>
+          <select id="rptTipo">
+            <option value="ejecutivo">Resumen Ejecutivo</option>
+            <option value="activos">Todos los Activos</option>
+            <option value="bloqueados">Bloqueados</option>
+            <option value="fuera-ans">Fuera de ANS</option>
+            <option value="criticos">Críticos Activos</option>
+            <option value="por-mesa">Detalle por Mesa</option>
+            <option value="por-srl">Detalle por SRL</option>
+          </select>
+        </div>
+        <div class="filtergroup"><label>Mesa</label><select id="rptMesa"><option value="">Todas</option></select></div>
+        <div class="filtergroup"><label>SRL</label><select id="rptSrl"><option value="">Todos</option></select></div>
+        <div class="filtergroup" style="flex-direction:row;align-items:flex-end;gap:8px;">
+          <button class="btn teal" id="btnRptGen">Generar</button>
+          <button class="btn" id="btnRptExcel">Excel</button>
+          <button class="btn outline" id="btnRptPrint">Imprimir PDF</button>
+        </div>
+      </div>
+    </div>
+    <div id="rptPreview"></div>
   </section>
 
 </main>
@@ -553,6 +614,8 @@ function renderCurrentView(){
   if(activeView==='kanban') renderKanban();
   else if(activeView==='dashboard') renderDashboard();
   else if(activeView==='tabla') renderTable();
+  else if(activeView==='analitica') renderAnalitica();
+  else if(activeView==='reportes') renderReportes();
 }
 function updateTotalBadge(){
   document.getElementById('totalBadge').textContent = Object.keys(casosMap).length + ' casos';
@@ -689,6 +752,170 @@ function renderDashboard(){
         '</span><span style="text-align:right;">'+escapeHtml(c.estadoBau)+' · '+calcDiasEnCola(c)+' días<br>'+escapeHtml(c.mesa||'-')+'</span></div>').join('');
   }
 }
+
+/* ================= ANALÍTICA ================= */
+const _charts = {};
+function _mkChart(id, type, data, opts){
+  if(_charts[id]) _charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  _charts[id] = new Chart(ctx, {type, data, options: Object.assign({responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}, opts||{})});
+}
+const PALETTE = ['#004481','#02A5A5','#072146','#f57c00','#43a047','#c0392b','#fbc02d','#7b1fa2','#0288d1','#e64a19'];
+
+function renderAnalitica(){
+  const casos = getAllCasos();
+  const activos = casos.filter(isActivo);
+  const fueraAns = activos.filter(isFueraAns);
+  const criticos = casos.filter(c=>c.esCriticoActivo);
+
+  // KPIs
+  document.getElementById('anaKpiGrid').innerHTML = [
+    {l:'Total casos', n:casos.length, a:false},
+    {l:'Activos', n:activos.length, a:false},
+    {l:'Fuera de ANS', n:fueraAns.length, a:fueraAns.length>0},
+    {l:'Bloqueados', n:activos.filter(c=>c.estadoBau==='Bloqueado').length, a:false},
+    {l:'Críticos activos', n:criticos.length, a:criticos.length>0},
+    {l:'Cerrados', n:casos.filter(c=>c.estadoBau==='Cerrado').length, a:false}
+  ].map(k=>'<div class="kpi-card'+(k.a?' alert':'')+'"><div class="num">'+k.n+'</div><div class="label">'+k.l+'</div></div>').join('');
+
+  // Donut Estado BAU
+  const estadoCounts = {};
+  STATES_KANBAN.concat(['Descartado']).forEach(s=>{ estadoCounts[s]=casos.filter(c=>c.estadoBau===s).length; });
+  _mkChart('chartEstado','doughnut',{
+    labels: Object.keys(estadoCounts),
+    datasets:[{data:Object.values(estadoCounts), backgroundColor:PALETTE}]
+  },{plugins:{legend:{position:'right'}}});
+
+  // Barras Mesa (activos)
+  const mesaCounts = MESAS.map(m=>activos.filter(c=>c.mesa===m).length);
+  _mkChart('chartMesa','bar',{
+    labels:MESAS,
+    datasets:[{label:'Activos', data:mesaCounts, backgroundColor:'#004481'}]
+  },{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}}});
+
+  // Barras Tipo
+  const tipoCounts = TIPOS.map(t=>activos.filter(c=>c.tipo===t).length);
+  _mkChart('chartTipo','bar',{
+    labels:TIPOS.map(t=>t.length>14?t.slice(0,14)+'…':t),
+    datasets:[{label:'Casos activos', data:tipoCounts, backgroundColor:PALETTE}]
+  },{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}});
+
+  // Línea evolución mensual
+  const monthMap = {};
+  casos.forEach(c=>{ if(!c.fechaRegistro) return; const m=c.fechaRegistro.slice(0,7); monthMap[m]=(monthMap[m]||0)+1; });
+  const months = Object.keys(monthMap).sort();
+  _mkChart('chartEvolucion','line',{
+    labels:months.map(m=>{ const [y,mo]=m.split('-'); return mo+'/'+y.slice(2); }),
+    datasets:[{label:'Casos registrados', data:months.map(m=>monthMap[m]), borderColor:'#02A5A5', backgroundColor:'rgba(2,165,165,.15)', fill:true, tension:0.3}]
+  },{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}});
+
+  // ANS por Mesa
+  _mkChart('chartAns','bar',{
+    labels:MESAS,
+    datasets:[
+      {label:'A tiempo', data:MESAS.map(m=>activos.filter(c=>c.mesa===m && !isFueraAns(c)).length), backgroundColor:'#43a047'},
+      {label:'Fuera ANS', data:MESAS.map(m=>activos.filter(c=>c.mesa===m && isFueraAns(c)).length), backgroundColor:'#c0392b'}
+    ]
+  },{scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}});
+}
+
+/* ================= REPORTES ================= */
+let _rptData = [];
+
+function getRptData(){
+  const tipo = document.getElementById('rptTipo').value;
+  const mesa = document.getElementById('rptMesa').value;
+  const srl  = document.getElementById('rptSrl').value;
+  let base = getAllCasos();
+  if(mesa) base = base.filter(c=>c.mesa===mesa);
+  if(srl)  base = base.filter(c=>c.srlResponsable===srl);
+  if(tipo==='activos')    return base.filter(isActivo);
+  if(tipo==='bloqueados') return base.filter(c=>c.estadoBau==='Bloqueado'||c.bloqueador);
+  if(tipo==='fuera-ans')  return base.filter(isFueraAns);
+  if(tipo==='criticos')   return base.filter(c=>c.esCriticoActivo);
+  if(tipo==='por-mesa')   return base.filter(isActivo);
+  if(tipo==='por-srl')    return base.filter(isActivo);
+  // ejecutivo: resumen por mesa
+  return base.filter(isActivo);
+}
+
+const RPT_COLS = [
+  {key:'noCaso',l:'No. Caso'},{key:'asunto',l:'Asunto'},{key:'mesa',l:'Mesa'},
+  {key:'tipo',l:'Tipo'},{key:'estadoBau',l:'Estado BAU'},{key:'srlResponsable',l:'SRL'},
+  {key:'responsable',l:'Responsable'},{key:'ansSLA',l:'SLA(h)'},
+  {key:'fechaRegistro',l:'F. Registro'},{key:'fechaCompromisoProduccion',l:'F. Compromiso'},
+  {key:'bloqueador',l:'Bloqueador'},{key:'proximoPaso',l:'Próximo Paso'},{key:'jira',l:'JIRA'}
+];
+
+function rptSummaryHtml(data){
+  const mesas = [...new Set(data.map(c=>c.mesa||'Sin mesa'))];
+  return '<div class="rpt-summary">'+
+    [{l:'Total',n:data.length},{l:'Bloqueados',n:data.filter(c=>c.estadoBau==='Bloqueado').length},
+     {l:'Fuera ANS',n:data.filter(isFueraAns).length},{l:'Mesas',n:mesas.length}]
+    .map(k=>'<div class="rpt-summary-card"><div class="n">'+k.n+'</div><div class="l">'+k.l+'</div></div>').join('')+'</div>';
+}
+
+function renderReportes(){
+  fillSelect('rptMesa', MESAS);
+  fillSelect('rptSrl', SRLS);
+}
+
+function generateReport(){
+  const tipo = document.getElementById('rptTipo').value;
+  _rptData = getRptData();
+  const preview = document.getElementById('rptPreview');
+
+  if(tipo==='ejecutivo'){
+    const rows = MESAS.map(m=>{
+      const inM = _rptData.filter(c=>c.mesa===m);
+      return '<tr><td>'+m+'</td><td>'+inM.length+'</td>'+
+        '<td>'+inM.filter(c=>(c.tipo||'').startsWith('Novedad')).length+'</td>'+
+        '<td>'+inM.filter(c=>(c.tipo||'').startsWith('Incidencia')).length+'</td>'+
+        '<td>'+inM.filter(c=>c.tipo==='Mantenimiento').length+'</td>'+
+        '<td>'+inM.filter(c=>c.estadoBau==='Bloqueado').length+'</td>'+
+        '<td>'+inM.filter(isFueraAns).length+'</td>'+
+        '<td>'+(inM.length?Math.round(inM.map(calcDiasEnCola).filter(d=>typeof d==='number').reduce((a,b)=>a+b,0)/inM.length):0)+'</td></tr>';
+    }).join('');
+    preview.innerHTML = rptSummaryHtml(_rptData)+
+      '<div class="card"><table><thead><tr><th>Mesa</th><th>Activos</th><th>Novedades</th><th>Incidencias</th><th>Mantenimientos</th><th>Bloqueados</th><th>Fuera ANS</th><th>Días prom.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    return;
+  }
+
+  const cols = tipo==='por-mesa'
+    ? [{key:'mesa',l:'Mesa'},...RPT_COLS.filter(c=>c.key!=='mesa')]
+    : tipo==='por-srl'
+    ? [{key:'srlResponsable',l:'SRL'},...RPT_COLS.filter(c=>c.key!=='srlResponsable')]
+    : RPT_COLS;
+
+  const sorted = _rptData.slice().sort((a,b)=>(a.mesa||'').localeCompare(b.mesa||''));
+  preview.innerHTML = rptSummaryHtml(_rptData)+
+    '<div class="card table-scroll"><table><thead><tr>'+
+    cols.map(c=>'<th>'+escapeHtml(c.l)+'</th>').join('')+'</tr></thead><tbody>'+
+    sorted.map(c=>'<tr>'+cols.map(col=>{
+      let v = col.key==='diasEnCola' ? calcDiasEnCola(c) : c[col.key];
+      if(col.key==='esCriticoActivo') v = c.esCriticoActivo?'Sí':'No';
+      return '<td>'+escapeHtml(v)+'</td>';
+    }).join('')+'</tr>').join('')+'</tbody></table></div>';
+}
+
+document.getElementById('btnRptGen').addEventListener('click', generateReport);
+document.getElementById('btnRptPrint').addEventListener('click', ()=>{ generateReport(); setTimeout(()=>window.print(), 300); });
+document.getElementById('btnRptExcel').addEventListener('click', ()=>{
+  generateReport();
+  if(!_rptData.length){ showToast('Sin datos para exportar.'); return; }
+  const tipo = document.getElementById('rptTipo').value;
+  let rows;
+  if(tipo==='ejecutivo'){
+    rows = MESAS.map(m=>{ const inM=_rptData.filter(c=>c.mesa===m); return {Mesa:m,Activos:inM.length,Novedades:inM.filter(c=>(c.tipo||'').startsWith('Novedad')).length,Incidencias:inM.filter(c=>(c.tipo||'').startsWith('Incidencia')).length,Mantenimientos:inM.filter(c=>c.tipo==='Mantenimiento').length,Bloqueados:inM.filter(c=>c.estadoBau==='Bloqueado').length,FueraANS:inM.filter(isFueraAns).length}; });
+  } else {
+    rows = _rptData.map(c=>{ const r={}; RPT_COLS.forEach(col=>{ r[col.l]=col.key==='diasEnCola'?calcDiasEnCola(c):c[col.key]; }); return r; });
+  }
+  const ws=XLSX.utils.json_to_sheet(rows), wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Reporte');
+  const now=new Date();
+  XLSX.writeFile(wb,'BAU_Reporte_'+tipo+'_'+now.getFullYear()+pad2(now.getMonth()+1)+pad2(now.getDate())+'.xlsx');
+});
 
 /* ================= TABLE VIEW ================= */
 function tableFilteredCasos(){
