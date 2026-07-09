@@ -331,6 +331,7 @@ function isFueraAns(caso){ const d=calcDiasEnCola(caso); const s=calcAnsSLA(caso
 
 const ARANDA_HEADER_MAP = {};
 ARANDA_FIELDS.forEach(f=>{ ARANDA_HEADER_MAP[normalize(f.label)] = f.key; });
+ARANDA_HEADER_MAP['eleel'] = 'noCaso'; // alias Aranda export bug
 
 let casosMap = {};   // noCaso -> caso object
 let activeView = 'import';
