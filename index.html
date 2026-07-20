@@ -114,6 +114,42 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
 #bitLog{white-space:pre-wrap;background:#f7f9fb;border-radius:6px;padding:8px;font-size:12px;max-height:100px;overflow-y:auto;margin-bottom:6px;}
 .hidden{display:none !important;}
 .hint{font-size:11px;color:#8a97a5;margin-top:-6px;margin-bottom:10px;}
+/* ---------- Gestión ---------- */
+.gest-cats{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.gest-cat{padding:8px 18px;border-radius:20px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:13px;font-weight:bold;color:#5b6b7c;transition:.15s;}
+.gest-cat:hover{border-color:var(--azul);color:var(--azul);}
+.gest-cat.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.gest-cat .n{background:rgba(127,127,127,.25);border-radius:10px;padding:1px 8px;margin-left:6px;font-size:11px;}
+.gest-cat.active .n{background:var(--teal);color:var(--navy);}
+.gest-group{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden;}
+.gest-group-header{display:flex;justify-content:space-between;align-items:center;background:#eef3f8;padding:10px 14px;cursor:pointer;gap:10px;flex-wrap:wrap;}
+.gest-group-header h3{margin:0;font-size:14px;color:var(--navy);}
+.gest-group-header .stats{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;align-items:center;}
+.gest-stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:2px 8px;white-space:nowrap;}
+.gest-stat.warn{background:#c0392b;color:#fff;border-color:#c0392b;}
+.gest-table-wrap{overflow-x:auto;}
+.gest-table{width:100%;min-width:1100px;}
+.gest-table td,.gest-table th{font-size:12px;padding:5px 7px;vertical-align:middle;}
+.gest-table th{cursor:default;}
+.gest-table select{padding:4px 5px;font-size:11.5px;border:1px solid var(--border);border-radius:4px;max-width:135px;background:#fff;}
+.gest-table input.gpaso{padding:4px 6px;font-size:11.5px;border:1px solid var(--border);border-radius:4px;width:150px;}
+.gest-table .caselink{color:var(--azul);font-weight:bold;cursor:pointer;white-space:nowrap;}
+.gest-table .caselink:hover{text-decoration:underline;}
+.prio-btns button{border:none;background:#e2e8f0;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:10px;margin:0 1px;}
+.prio-btns button:hover{background:var(--teal);color:#fff;}
+.prio-num{display:inline-block;min-width:20px;text-align:center;font-weight:bold;color:var(--navy);}
+.bulkbar{position:sticky;top:64px;z-index:40;background:var(--navy);color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.bulkbar.show{display:flex;}
+.bulkbar select{padding:6px;border-radius:6px;border:none;font-size:12px;}
+.sla-pill{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;color:#fff;white-space:nowrap;}
+.gest-more{text-align:center;padding:8px;}
+/* ---------- Tipo badges ---------- */
+.tipo-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;color:#fff;margin-bottom:4px;}
+.tipo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px;}
+.tipo-tile{background:#fff;border-radius:8px;padding:12px 14px;border-left:5px solid #999;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:3px;}
+.tipo-tile .tn{font-size:22px;font-weight:bold;color:var(--navy);}
+.tipo-tile .tl{font-size:11px;color:#5b6b7c;}
+.tipo-tile .ts{font-size:10px;color:#8a97a5;}
 /* ---------- Analítica ---------- */
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .chart-grid.single{grid-template-columns:1fr;}
@@ -135,6 +171,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
   <div class="brand"><b>BBVA Seguros Colombia</b><span>Mesa de Soporte BAU</span></div>
   <nav class="mainnav">
     <button data-view="import" class="active">Importar</button>
+    <button data-view="gestion">Gestión</button>
     <button data-view="kanban">Kanban</button>
     <button data-view="dashboard">Dashboard</button>
     <button data-view="tabla">Tabla</button>
@@ -166,6 +203,33 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     </div>
   </section>
 
+  <!-- ============ GESTIÓN VIEW ============ -->
+  <section id="view-gestion" class="view">
+    <h2 class="section-title">Gestión de Backlog</h2>
+    <div class="gest-cats" id="gestCats"></div>
+    <div class="kpi-grid" id="gestKpis"></div>
+    <div class="filterbar">
+      <div class="filtergroup"><label>Buscar (No. Caso / Asunto)</label><input type="text" id="gfSearch" placeholder="Buscar..."></div>
+      <div class="filtergroup"><label>Aplicativo</label><select id="gfMesa"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>Responsable</label><select id="gfResp"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>SRL</label><select id="gfSrl"><option value="">Todos</option></select></div>
+      <div class="filtergroup"><label>Estado BAU</label><select id="gfEstado"><option value="">Todos</option></select></div>
+      <div class="filtergroup" style="flex-direction:row;align-items:center;gap:6px;margin-top:18px;">
+        <input type="checkbox" id="gfIncluirCerrados">
+        <label for="gfIncluirCerrados" style="font-size:13px;color:var(--text);cursor:pointer;">Incluir cerrados</label>
+      </div>
+    </div>
+    <div class="bulkbar" id="bulkBar">
+      <b><span id="bulkCount">0</span> seleccionados</b>
+      <select id="bulkTipo"><option value="">Cambiar Tipo…</option></select>
+      <select id="bulkSrl"><option value="">Cambiar SRL…</option></select>
+      <select id="bulkEstado"><option value="">Cambiar Estado…</option></select>
+      <button class="btn teal small" id="btnBulkApply">Aplicar</button>
+      <button class="btn small" id="btnBulkClear" style="background:transparent;border:1px solid #fff;">Limpiar selección</button>
+    </div>
+    <div id="gestGroups"></div>
+  </section>
+
   <!-- ============ KANBAN VIEW ============ -->
   <section id="view-kanban" class="view">
     <h2 class="section-title">Tablero Kanban</h2>
@@ -191,11 +255,17 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
     </div>
     <div class="kpi-grid" id="kpiGrid"></div>
     <div class="card" style="margin-bottom:16px;">
+      <h2 class="section-title" style="margin-top:0;">Casos activos por Tipo</h2>
+      <div class="tipo-grid" id="tipoDashGrid"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
       <h2 class="section-title" style="margin-top:0;">Semáforo por Mesa</h2>
+      <div style="overflow-x:auto;">
       <table id="semaforoTable">
-        <thead><tr><th>Mesa</th><th>Novedades</th><th>Incidencias</th><th>Mantenimientos</th><th>Bloqueados</th><th>Días prom. en cola</th><th>Alerta</th></tr></thead>
+        <thead><tr><th>Mesa</th><th>N-T1</th><th>N-T2</th><th>N-T3</th><th>INC-C</th><th>INC-F</th><th>INC-O</th><th>MNT</th><th>Bloqueados</th><th>Días prom.</th><th>Alerta</th></tr></thead>
         <tbody></tbody>
       </table>
+      </div>
     </div>
   </section>
 
@@ -362,6 +432,7 @@ const ARANDA_FIELDS = [
 const MANUAL_FIELDS = [
   {key:'tipo', label:'TIPO'},
   {key:'tipoOriginal', label:'TIPO ORIGINAL'},
+  {key:'prioBau', label:'PRIORIDAD BAU'},
   {key:'ansSLA', label:'ANS SLA (h)'},
   {key:'criticidad', label:'CRITICIDAD'},
   {key:'mesa', label:'MESA'},
@@ -387,6 +458,8 @@ const MESAS = ['AcselX','AcselWeb','Altamira','SICS','Oasis','APlus'];
 const SRLS = ['José Miguel','Juan Carlos','Cristian Ramírez','Sin asignar'];
 const TIPOS = ['Novedad T1','Novedad T2','Novedad T3','Incidencia Crítica','Incidencia Funcional','Incidencia Operativa','Mantenimiento'];
 const SLA_HORAS = {'Novedad T1':13,'Novedad T2':28,'Novedad T3':43,'Incidencia Crítica':36,'Incidencia Funcional':90,'Incidencia Operativa':70,'Mantenimiento':112};
+const TIPO_COLORS = {'Novedad T1':'#0288d1','Novedad T2':'#0097a7','Novedad T3':'#00838f','Incidencia Crítica':'#c0392b','Incidencia Funcional':'#e67e22','Incidencia Operativa':'#f39c12','Mantenimiento':'#7b1fa2'};
+const TIPO_SHORT = {'Novedad T1':'N-T1','Novedad T2':'N-T2','Novedad T3':'N-T3','Incidencia Crítica':'INC-C','Incidencia Funcional':'INC-F','Incidencia Operativa':'INC-O','Mantenimiento':'MNT'};
 function calcAnsSLA(tipo){ return SLA_HORAS[tipo] || null; }
 function isFueraAns(caso){ const d=calcDiasEnCola(caso); const s=calcAnsSLA(caso.tipo); return typeof d==='number' && s ? (d*8)>s : false; }
 
@@ -474,7 +547,7 @@ function showToast(msg){
 }
 function defaultManualFields(){
   return {
-    tipo:'Novedad T1', tipoOriginal:'Novedad T1', ansSLA:13, criticidad:'', mesa:'',
+    tipo:'Novedad T1', tipoOriginal:'Novedad T1', prioBau:'', ansSLA:13, criticidad:'', mesa:'',
     techManager:'Diego González', srlResponsable:'Sin asignar',
     estadoBau:'Registro', fechaCompromisoProduccion:'', bloqueador:'', quienDesbloquea:'',
     jira:'', proximoPaso:'', bitacora:'', esCriticoActivo:false, fechaUltimaActualizacion:''
@@ -586,6 +659,12 @@ function populateFilterOptions(){
   fillSelect('kfMesa', MESAS); fillSelect('kfCrit', CRITICIDADES); fillSelect('kfSrl', SRLS); fillSelect('kfTipo', TIPOS);
   fillSelect('tfTipo', TIPOS); fillSelect('tfCrit', CRITICIDADES); fillSelect('tfMesa', MESAS); fillSelect('tfSrl', SRLS);
   fillSelect('tfEstado', STATES_KANBAN.concat(['Descartado']));
+  fillSelect('gfMesa', MESAS); fillSelect('gfSrl', SRLS);
+  fillSelect('gfEstado', STATES_KANBAN.concat(['Descartado']));
+  const resps = [...new Set(getAllCasos().map(c=>c.responsable).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  fillSelect('gfResp', resps);
+  fillSelect('bulkTipo', TIPOS); fillSelect('bulkSrl', SRLS);
+  fillSelect('bulkEstado', STATES_KANBAN.concat(['Descartado']));
 }
 function fillSelect(id, values){
   const sel = document.getElementById(id);
@@ -612,6 +691,7 @@ document.querySelectorAll('nav.mainnav button').forEach(btn=>{
 });
 function renderCurrentView(){
   if(activeView==='kanban') renderKanban();
+  else if(activeView==='gestion') renderGestion();
   else if(activeView==='dashboard') renderDashboard();
   else if(activeView==='tabla') renderTable();
   else if(activeView==='analitica') renderAnalitica();
@@ -672,14 +752,21 @@ function buildKanbanCard(c){
   div.dataset.nocaso = c.noCaso;
   const asuntoTrunc = (c.asunto||'').length>55 ? c.asunto.slice(0,55)+'…' : (c.asunto||'');
   const critBadge = c.criticidad ? '<span class="badge" style="background:'+(CRIT_COLORS[c.criticidad]||'#999')+'">'+escapeHtml(c.criticidad)+'</span>' : '';
+  const tipoColor = TIPO_COLORS[c.tipo] || '#555';
+  const tipoShort = TIPO_SHORT[c.tipo] || escapeHtml(c.tipo||'');
+  const tipoBadge = c.tipo ? '<span class="tipo-badge" style="background:'+tipoColor+'">'+tipoShort+'</span>' : '';
+  const slaInfo = c.ansSLA ? '<span style="font-size:10px;color:#8a97a5;">SLA: '+c.ansSLA+'h</span>' : '';
+  const diasCol = calcDiasEnCola(c);
+  const diasColor = (typeof diasCol==='number' && c.ansSLA && (diasCol*8)>c.ansSLA) ? '#c0392b' : '#5b6b7c';
   div.innerHTML =
     '<div class="kc-top"><span>'+escapeHtml(c.noCaso)+'</span>'+
     '<button class="star-btn" title="Crítico activo">'+(c.esCriticoActivo?'⭐':'☆')+'</button></div>'+
+    '<div style="margin-bottom:4px;">'+tipoBadge+(c.criticidad?' '+critBadge:'')+'</div>'+
     '<div class="kc-asunto">'+escapeHtml(asuntoTrunc)+'</div>'+
-    '<span style="font-size:10px;color:#8a97a5;">Aranda: '+escapeHtml(c.estado||'-')+' · '+escapeHtml(c.tipoRegistro||'-')+'</span>'+
-    '<div class="kc-meta">'+critBadge+
+    '<div class="kc-meta">'+
     '<span>'+escapeHtml(c.mesa||'-')+'</span>'+
-    '<span>'+calcDiasEnCola(c)+' días</span>'+
+    '<span style="color:'+diasColor+';font-weight:'+(diasColor==='#c0392b'?'bold':'normal')+'">'+diasCol+' días</span>'+
+    slaInfo+
     '<span>'+escapeHtml(c.srlResponsable||'-')+'</span></div>'+
     (c.bloqueador ? '<div class="kc-bloqueador">⛔ '+escapeHtml(c.bloqueador)+'</div>' : '');
   div.addEventListener('dragstart', e=>{
@@ -704,8 +791,239 @@ function buildKanbanCard(c){
 });
 document.getElementById('kfMostrarCerrados').addEventListener('change', ()=>renderKanban());
 
-/* ================= DASHBOARD ================= */
+/* ================= GESTIÓN ================= */
 function isActivo(c){ return c.estadoBau!=='Cerrado' && c.estadoBau!=='Descartado'; }
+let gFilters = {cat:'', search:'', mesa:'', resp:'', srl:'', estado:''};
+let gSelection = new Set();
+let gCollapsed = new Set();
+let gExpanded = new Set();
+const GEST_ROW_LIMIT = 100;
+const GEST_CATS = [
+  {key:'', label:'Todos'},
+  {key:'Novedad', label:'Novedades'},
+  {key:'Incidencia', label:'Incidencias'},
+  {key:'Mantenimiento', label:'Mantenimientos'}
+];
+function matchCat(c, cat){ return !cat || (c.tipo||'').startsWith(cat); }
+function hasPrio(c){ return c.prioBau!==undefined && c.prioBau!==null && c.prioBau!==''; }
+function gestSort(list){
+  return list.slice().sort((a,b)=>{
+    const pa = hasPrio(a) ? +a.prioBau : Infinity;
+    const pb = hasPrio(b) ? +b.prioBau : Infinity;
+    if(pa!==pb) return pa-pb;
+    const da = calcDiasEnCola(a), db = calcDiasEnCola(b);
+    return (typeof db==='number'?db:-1) - (typeof da==='number'?da:-1);
+  });
+}
+function gestBase(){
+  const incluirCerrados = document.getElementById('gfIncluirCerrados').checked;
+  const s = normalize(gFilters.search);
+  return getAllCasos().filter(c=>{
+    if(!incluirCerrados && !isActivo(c)) return false;
+    if(gFilters.mesa && c.mesa!==gFilters.mesa) return false;
+    if(gFilters.resp && (c.responsable||'')!==gFilters.resp) return false;
+    if(gFilters.srl && c.srlResponsable!==gFilters.srl) return false;
+    if(gFilters.estado && c.estadoBau!==gFilters.estado) return false;
+    if(s && !(normalize(c.noCaso)+' '+normalize(c.asunto)).includes(s)) return false;
+    return true;
+  });
+}
+function logTipoChangeCaso(c, oldT, newT){
+  const now = new Date();
+  const entry = '<'+pad2(now.getDate())+'/'+pad2(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad2(now.getHours())+':'+pad2(now.getMinutes())+'> Tipo cambiado: '+oldT+' → '+newT;
+  c.bitacora = c.bitacora ? entry+'\n'+c.bitacora : entry;
+}
+function moveCasePriority(noCaso, dir){
+  const c = casosMap[noCaso];
+  if(!c) return;
+  // Ordenar solo los casos VISIBLES en pantalla (misma mesa, mismos filtros activos, misma categoría)
+  const visible = gestSort(gestBase().filter(x=> x.mesa===c.mesa && matchCat(x, gFilters.cat)));
+  const idx = visible.findIndex(x=>x.noCaso===noCaso);
+  const tgt = idx + dir;
+  if(idx<0 || tgt<0 || tgt>=visible.length) return;
+  const tmp = visible[idx]; visible[idx]=visible[tgt]; visible[tgt]=tmp;
+  visible.forEach((x,i)=>{ x.prioBau = i+1; });
+  c.fechaUltimaActualizacion = toISODateTime(new Date());
+  saveState();
+  renderGestion();
+}
+function gestSelOptions(values, current){
+  return values.map(v=>'<option value="'+escapeHtml(v)+'"'+(v===current?' selected':'')+'>'+escapeHtml(v)+'</option>').join('');
+}
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent = gSelection.size;
+  bar.classList.toggle('show', gSelection.size>0);
+}
+function renderGestion(){
+  const all = gestBase();
+
+  // Pills de categoría con conteo
+  document.getElementById('gestCats').innerHTML = GEST_CATS.map(cat=>{
+    const n = all.filter(c=>matchCat(c, cat.key)).length;
+    return '<div class="gest-cat'+(gFilters.cat===cat.key?' active':'')+'" data-cat="'+escapeHtml(cat.key)+'">'+cat.label+'<span class="n">'+n+'</span></div>';
+  }).join('');
+
+  const casos = all.filter(c=>matchCat(c, gFilters.cat));
+
+  // KPIs de la vista
+  const fueraSla = casos.filter(isFueraAns);
+  const sinSrl = casos.filter(c=>!c.srlResponsable || c.srlResponsable==='Sin asignar');
+  const sinPrio = casos.filter(c=>!hasPrio(c));
+  const bloq = casos.filter(c=>c.estadoBau==='Bloqueado');
+  document.getElementById('gestKpis').innerHTML = [
+    {l:'En backlog', n:casos.length, a:false},
+    {l:'Bloqueados', n:bloq.length, a:bloq.length>0},
+    {l:'Fuera de ANS', n:fueraSla.length, a:fueraSla.length>0},
+    {l:'Sin SRL asignado', n:sinSrl.length, a:false},
+    {l:'Sin prioridad', n:sinPrio.length, a:false}
+  ].map(k=>'<div class="kpi-card'+(k.a?' alert':'')+'"><div class="num">'+k.n+'</div><div class="label">'+k.l+'</div></div>').join('');
+
+  // Grupos por aplicativo (mesa)
+  const groupsHtml = MESAS.concat(['']).map(mesa=>{
+    const inMesa = gestSort(casos.filter(c=>(c.mesa||'')===mesa));
+    if(!inMesa.length) return '';
+    const title = mesa || 'Sin aplicativo';
+    const collapsed = gCollapsed.has(title);
+    const expanded = gExpanded.has(title);
+    const visible = expanded ? inMesa : inMesa.slice(0, GEST_ROW_LIMIT);
+    const estadoStats = STATES_KANBAN.concat(['Descartado'])
+      .map(s=>({s, n:inMesa.filter(c=>c.estadoBau===s).length}))
+      .filter(x=>x.n>0)
+      .map(x=>'<span class="gest-stat">'+escapeHtml(x.s)+': '+x.n+'</span>').join('');
+    const fueraN = inMesa.filter(isFueraAns).length;
+    const rows = collapsed ? '' : visible.map(c=>{
+      const dias = calcDiasEnCola(c);
+      const fuera = isFueraAns(c);
+      const tc = TIPO_COLORS[c.tipo]||'#555';
+      const prio = hasPrio(c) ? c.prioBau : '—';
+      const sel = gSelection.has(c.noCaso) ? ' checked' : '';
+      return '<tr data-nocaso="'+escapeHtml(c.noCaso)+'">'+
+        '<td><input type="checkbox" class="gsel"'+sel+'></td>'+
+        '<td style="white-space:nowrap;"><span class="prio-num">'+prio+'</span><span class="prio-btns"><button class="gup" title="Subir prioridad">▲</button><button class="gdn" title="Bajar prioridad">▼</button></span></td>'+
+        '<td><span class="caselink">'+escapeHtml(c.noCaso)+'</span></td>'+
+        '<td title="'+escapeHtml(c.asunto||'')+'">'+escapeHtml((c.asunto||'').length>50 ? c.asunto.slice(0,50)+'…' : (c.asunto||''))+'</td>'+
+        '<td><select class="gtipo" style="border-left:4px solid '+tc+'">'+gestSelOptions(TIPOS, c.tipo)+'</select></td>'+
+        '<td>'+escapeHtml(c.responsable||'—')+'</td>'+
+        '<td><select class="gsrl">'+gestSelOptions(SRLS, c.srlResponsable)+'</select></td>'+
+        '<td><select class="gestado">'+gestSelOptions(STATES_KANBAN.concat(['Descartado']), c.estadoBau)+'</select></td>'+
+        '<td style="text-align:center;'+(fuera?'color:#c0392b;font-weight:bold;':'')+'">'+dias+'</td>'+
+        '<td><span class="sla-pill" style="background:'+(fuera?'#c0392b':'#43a047')+'" title="SLA '+(c.ansSLA||'-')+'h · usadas aprox '+(typeof dias==='number'?dias*8:'-')+'h">'+(fuera?'Fuera':'A tiempo')+' · '+(c.ansSLA||'-')+'h</span></td>'+
+        '<td><input type="text" class="gpaso" value="'+escapeHtml(c.proximoPaso||'')+'" placeholder="Próximo paso..."></td>'+
+        '</tr>';
+    }).join('');
+    const moreBtn = (!collapsed && !expanded && inMesa.length>GEST_ROW_LIMIT)
+      ? '<div class="gest-more"><button class="btn outline small gmore" data-mesa="'+escapeHtml(title)+'">Mostrar todos ('+inMesa.length+')</button></div>' : '';
+    return '<div class="gest-group" data-mesa="'+escapeHtml(title)+'">'+
+      '<div class="gest-group-header"><h3>'+(collapsed?'▸':'▾')+' '+escapeHtml(title)+' <span style="font-weight:normal;color:#5b6b7c;">('+inMesa.length+')</span></h3>'+
+      '<div class="stats">'+estadoStats+(fueraN?'<span class="gest-stat warn">Fuera ANS: '+fueraN+'</span>':'')+'</div></div>'+
+      (collapsed ? '' : '<div class="gest-table-wrap"><table class="gest-table"><thead><tr>'+
+        '<th style="width:26px;"></th><th>Prio</th><th>No. Caso</th><th>Asunto</th><th>Tipo</th><th>Responsable</th><th>SRL</th><th>Estado BAU</th><th>Días</th><th>ANS</th><th>Próximo paso</th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table></div>'+moreBtn)+
+      '</div>';
+  }).join('');
+  document.getElementById('gestGroups').innerHTML = groupsHtml || '<div class="card"><p class="hint">No hay casos que coincidan con los filtros.</p></div>';
+  updateBulkBar();
+}
+// Delegación de eventos del contenedor de grupos
+document.getElementById('gestGroups').addEventListener('click', e=>{
+  const header = e.target.closest('.gest-group-header');
+  if(header){
+    const mesa = header.parentElement.dataset.mesa;
+    if(gCollapsed.has(mesa)) gCollapsed.delete(mesa); else gCollapsed.add(mesa);
+    renderGestion();
+    return;
+  }
+  const more = e.target.closest('.gmore');
+  if(more){ gExpanded.add(more.dataset.mesa); renderGestion(); return; }
+  const tr = e.target.closest('tr[data-nocaso]');
+  if(!tr) return;
+  const noCaso = tr.dataset.nocaso;
+  if(e.target.closest('.gup')){ moveCasePriority(noCaso, -1); return; }
+  if(e.target.closest('.gdn')){ moveCasePriority(noCaso, 1); return; }
+  if(e.target.closest('.caselink')){ openEditPanel(noCaso); return; }
+});
+document.getElementById('gestGroups').addEventListener('change', e=>{
+  const tr = e.target.closest('tr[data-nocaso]');
+  if(!tr) return;
+  const c = casosMap[tr.dataset.nocaso];
+  if(!c) return;
+  if(e.target.classList.contains('gsel')){
+    if(e.target.checked) gSelection.add(c.noCaso); else gSelection.delete(c.noCaso);
+    updateBulkBar();
+    return;
+  }
+  let changed = false;
+  if(e.target.classList.contains('gtipo')){
+    const nuevo = e.target.value;
+    if(nuevo && nuevo!==c.tipo){
+      logTipoChangeCaso(c, c.tipo||'(sin tipo)', nuevo);
+      c.tipo = nuevo;
+      c.ansSLA = calcAnsSLA(nuevo) || c.ansSLA;
+      changed = true;
+    }
+  } else if(e.target.classList.contains('gsrl')){
+    c.srlResponsable = e.target.value; changed = true;
+  } else if(e.target.classList.contains('gestado')){
+    c.estadoBau = e.target.value; changed = true;
+  } else if(e.target.classList.contains('gpaso')){
+    c.proximoPaso = e.target.value.trim(); changed = true;
+  }
+  if(changed){
+    c.fechaUltimaActualizacion = toISODateTime(new Date());
+    saveState();
+    renderGestion();
+    updateTotalBadge();
+  }
+});
+document.getElementById('gestCats').addEventListener('click', e=>{
+  const pill = e.target.closest('.gest-cat');
+  if(!pill) return;
+  gFilters.cat = pill.dataset.cat;
+  gExpanded.clear();
+  gSelection.clear();
+  renderGestion();
+});
+[['gfSearch','search'],['gfMesa','mesa'],['gfResp','resp'],['gfSrl','srl'],['gfEstado','estado']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('input', e=>{ gFilters[key]=e.target.value; gSelection.clear(); renderGestion(); });
+  document.getElementById(id).addEventListener('change', e=>{ gFilters[key]=e.target.value; gSelection.clear(); renderGestion(); });
+});
+document.getElementById('gfIncluirCerrados').addEventListener('change', ()=>{ gSelection.clear(); renderGestion(); });
+document.getElementById('btnBulkClear').addEventListener('click', ()=>{
+  gSelection.clear();
+  renderGestion();
+});
+document.getElementById('btnBulkApply').addEventListener('click', ()=>{
+  if(!gSelection.size) return;
+  const tipo = document.getElementById('bulkTipo').value;
+  const srl = document.getElementById('bulkSrl').value;
+  const estado = document.getElementById('bulkEstado').value;
+  if(!tipo && !srl && !estado){ showToast('Selecciona qué cambiar (tipo, SRL o estado).'); return; }
+  let n = 0;
+  gSelection.forEach(noCaso=>{
+    const c = casosMap[noCaso];
+    if(!c) return;
+    if(tipo && tipo!==c.tipo){
+      logTipoChangeCaso(c, c.tipo||'(sin tipo)', tipo);
+      c.tipo = tipo;
+      c.ansSLA = calcAnsSLA(tipo) || c.ansSLA;
+    }
+    if(srl) c.srlResponsable = srl;
+    if(estado) c.estadoBau = estado;
+    c.fechaUltimaActualizacion = toISODateTime(new Date());
+    n++;
+  });
+  gSelection.clear();
+  document.getElementById('bulkTipo').value='';
+  document.getElementById('bulkSrl').value='';
+  document.getElementById('bulkEstado').value='';
+  saveState();
+  renderGestion();
+  updateTotalBadge();
+  showToast(n+' casos actualizados en lote.');
+});
+
+/* ================= DASHBOARD ================= */
 function renderDashboard(){
   const casos = getAllCasos();
   const activos = casos.filter(isActivo);
@@ -725,19 +1043,29 @@ function renderDashboard(){
     '<div class="kpi-card'+(k.alert?' alert':'')+'"><div class="num">'+k.num+'</div><div class="label">'+k.label+'</div></div>'
   ).join('');
 
+  // Tiles por tipo
+  document.getElementById('tipoDashGrid').innerHTML = TIPOS.map(t=>{
+    const cnt = activos.filter(c=>c.tipo===t).length;
+    const sla = SLA_HORAS[t];
+    const color = TIPO_COLORS[t]||'#555';
+    return '<div class="tipo-tile" style="border-left-color:'+color+'">'+
+      '<span class="tipo-badge" style="background:'+color+';align-self:flex-start">'+escapeHtml(TIPO_SHORT[t])+'</span>'+
+      '<div class="tn">'+cnt+'</div>'+
+      '<div class="tl">'+escapeHtml(t)+'</div>'+
+      '<div class="ts">SLA: '+sla+'h</div></div>';
+  }).join('');
+
   const tbody = document.querySelector('#semaforoTable tbody');
   tbody.innerHTML = MESAS.map(mesa=>{
     const inMesa = activos.filter(c=>c.mesa===mesa);
-    const nov = inMesa.filter(c=>(c.tipo||'').startsWith('Novedad')).length;
-    const inc = inMesa.filter(c=>(c.tipo||'').startsWith('Incidencia')).length;
-    const man = inMesa.filter(c=>c.tipo==='Mantenimiento').length;
     const bloq = inMesa.filter(c=>c.estadoBau==='Bloqueado').length;
     const dias = inMesa.map(calcDiasEnCola).filter(d=>typeof d==='number');
     const prom = dias.length ? (dias.reduce((a,b)=>a+b,0)/dias.length) : 0;
     let alerta='verde', txt='Normal';
     if(bloq>0){ alerta='rojo'; txt='Bloqueado'; }
     else if(prom>30){ alerta='amarillo'; txt='Atención'; }
-    return '<tr><td>'+escapeHtml(mesa)+'</td><td>'+nov+'</td><td>'+inc+'</td><td>'+man+'</td><td>'+bloq+'</td><td>'+prom.toFixed(1)+'</td>'+
+    const tipoCells = TIPOS.map(t=>'<td style="text-align:center">'+inMesa.filter(c=>c.tipo===t).length+'</td>').join('');
+    return '<tr><td><b>'+escapeHtml(mesa)+'</b></td>'+tipoCells+'<td style="text-align:center">'+bloq+'</td><td style="text-align:center">'+prom.toFixed(1)+'</td>'+
       '<td><span class="alert-cell alert-'+alerta+'">'+txt+'</span></td></tr>';
   }).join('');
 
@@ -842,7 +1170,7 @@ function getRptData(){
 
 const RPT_COLS = [
   {key:'noCaso',l:'No. Caso'},{key:'asunto',l:'Asunto'},{key:'mesa',l:'Mesa'},
-  {key:'tipo',l:'Tipo'},{key:'estadoBau',l:'Estado BAU'},{key:'srlResponsable',l:'SRL'},
+  {key:'prioBau',l:'Prio BAU'},{key:'tipo',l:'Tipo'},{key:'estadoBau',l:'Estado BAU'},{key:'srlResponsable',l:'SRL'},
   {key:'responsable',l:'Responsable'},{key:'ansSLA',l:'SLA(h)'},
   {key:'fechaRegistro',l:'F. Registro'},{key:'fechaCompromisoProduccion',l:'F. Compromiso'},
   {key:'bloqueador',l:'Bloqueador'},{key:'proximoPaso',l:'Próximo Paso'},{key:'jira',l:'JIRA'}
