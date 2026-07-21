@@ -280,7 +280,18 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <div class="filtergroup"><label>Mesa</label><select id="tfMesa"><option value="">Todas</option></select></div>
       <div class="filtergroup"><label>SRL</label><select id="tfSrl"><option value="">Todos</option></select></div>
       <div class="filtergroup"><label>Estado BAU</label><select id="tfEstado"><option value="">Todos</option></select></div>
-      <div class="filtergroup" style="justify-content:flex-end;"><button class="btn teal" id="btnExportExcel">Exportar a Excel</button></div>
+        <div class="filtergroup" style="flex-direction:row;align-items:flex-end;gap:6px;">
+        <button class="btn teal" id="btnExportExcel">Exportar a Excel</button>
+        <button class="btn outline small" id="btnToggleCols">+ Columnas Aranda</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span id="tblInfo" style="font-size:12px;color:#5b6b7c;"></span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn outline small" id="tblPrev">◀ Anterior</button>
+        <span id="tblPage" style="font-size:13px;font-weight:bold;color:var(--navy);min-width:80px;text-align:center;"></span>
+        <button class="btn outline small" id="tblNext">Siguiente ▶</button>
+      </div>
     </div>
     <div class="table-scroll"><table id="fullTable"><thead></thead><tbody></tbody></table></div>
   </section>
@@ -1269,6 +1280,24 @@ document.getElementById('btnRptExcel').addEventListener('click', ()=>{
 });
 
 /* ================= TABLE VIEW ================= */
+const TABLE_PAGE_SIZE = 100;
+let tablePage = 0;
+let tableShowAranda = false;
+
+// Columnas BAU principales (siempre visibles)
+const TABLE_COLS_BAU = [
+  {key:'noCaso',label:'No. Caso'},{key:'asunto',label:'Asunto'},
+  {key:'mesa',label:'Mesa'},{key:'tipo',label:'Tipo'},
+  {key:'estadoBau',label:'Estado BAU'},{key:'srlResponsable',label:'SRL'},
+  {key:'responsable',label:'Responsable'},{key:'prioBau',label:'Prio'},
+  {key:'diasEnCola',label:'Días cola'},{key:'ansSLA',label:'SLA(h)'},
+  {key:'fechaRegistro',label:'F. Registro'},{key:'fechaCompromisoProduccion',label:'F. Compromiso'},
+  {key:'bloqueador',label:'Bloqueador'},{key:'proximoPaso',label:'Próximo Paso'},
+  {key:'jira',label:'JIRA'},{key:'esCriticoActivo',label:'Crítico'}
+];
+
+function getTableCols(){ return tableShowAranda ? ALL_FIELDS : TABLE_COLS_BAU; }
+
 function tableFilteredCasos(){
   const s = normalize(tFilters.search);
   return getAllCasos().filter(c=>{
@@ -1299,42 +1328,73 @@ function sortCasos(list){
     return String(va).localeCompare(String(vb),'es',{numeric:true})*mult;
   });
 }
+function renderTableCell(c, f){
+  let val;
+  if(f.key==='diasEnCola') val = calcDiasEnCola(c);
+  else if(f.key==='esCriticoActivo') val = c.esCriticoActivo ? 'Sí' : 'No';
+  else if(['fechaRegistro','fechaEstimadaSolucion','fechaEstimadaAtencion','fechaCompromisoProduccion'].includes(f.key)) val = formatDate(c[f.key]);
+  else if(f.key==='fechaUltimaActualizacion') val = formatDateTime(c[f.key]);
+  else if(f.key==='bitacora') val = (c.bitacora||'').split('\n')[0];
+  else val = c[f.key];
+  return '<td>'+escapeHtml(val)+'</td>';
+}
 function renderTable(){
+  const cols = getTableCols();
   const thead = document.querySelector('#fullTable thead');
   const tbody = document.querySelector('#fullTable tbody');
-  thead.innerHTML = '<tr>'+ALL_FIELDS.map(f=>{
+  const allFiltered = sortCasos(tableFilteredCasos());
+  const total = allFiltered.length;
+  const maxPage = Math.max(0, Math.ceil(total / TABLE_PAGE_SIZE) - 1);
+  if(tablePage > maxPage) tablePage = maxPage;
+
+  const start = tablePage * TABLE_PAGE_SIZE;
+  const page = allFiltered.slice(start, start + TABLE_PAGE_SIZE);
+
+  // Info y paginación
+  document.getElementById('tblInfo').textContent =
+    total + ' casos' + (total !== getAllCasos().length ? ' (filtrados de '+getAllCasos().length+')' : '');
+  document.getElementById('tblPage').textContent = 'Pág '+(tablePage+1)+' / '+Math.max(1, maxPage+1);
+  document.getElementById('tblPrev').disabled = tablePage === 0;
+  document.getElementById('tblNext').disabled = tablePage >= maxPage;
+
+  // Cabecera — solo si cambió (evita re-bind innecesario)
+  thead.innerHTML = '<tr>'+cols.map(f=>{
     const arrow = sortState.key===f.key ? (sortState.dir==='asc'?' <span class="sort-arrow">▲</span>':' <span class="sort-arrow">▼</span>') : '';
-    return '<th data-key="'+f.key+'">'+escapeHtml(f.label)+arrow+'</th>';
+    return '<th data-key="'+f.key+'">'+escapeHtml(f.label||f.key)+arrow+'</th>';
   }).join('')+'</tr>';
   thead.querySelectorAll('th').forEach(th=>{
     th.addEventListener('click', ()=>{
       const key = th.dataset.key;
       if(sortState.key===key) sortState.dir = sortState.dir==='asc'?'desc':'asc';
       else { sortState.key = key; sortState.dir='asc'; }
+      tablePage = 0;
       renderTable();
     });
   });
-  const list = sortCasos(tableFilteredCasos());
-  tbody.innerHTML = list.map(c=>{
-    return '<tr data-nocaso="'+escapeHtml(c.noCaso)+'">'+ALL_FIELDS.map(f=>{
-      let val;
-      if(f.key==='diasEnCola') val = calcDiasEnCola(c);
-      else if(f.key==='esCriticoActivo') val = c.esCriticoActivo ? 'Sí' : 'No';
-      else if(f.key==='fechaRegistro' || f.key==='fechaEstimadaSolucion' || f.key==='fechaEstimadaAtencion' || f.key==='fechaCompromisoProduccion') val = formatDate(c[f.key]);
-      else if(f.key==='fechaUltimaActualizacion') val = formatDateTime(c[f.key]);
-      else if(f.key==='bitacora') val = (c.bitacora||'').split('\n')[0];
-      else val = c[f.key];
-      return '<td>'+escapeHtml(val)+'</td>';
-    }).join('')+'</tr>';
-  }).join('');
-  tbody.querySelectorAll('tr').forEach(tr=>{
-    tr.addEventListener('click', ()=> openEditPanel(tr.dataset.nocaso));
-    tr.style.cursor='pointer';
+
+  // Cuerpo — fragment para un solo reflow
+  const frag = document.createDocumentFragment();
+  page.forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.dataset.nocaso = c.noCaso;
+    tr.style.cursor = 'pointer';
+    tr.innerHTML = cols.map(f=>renderTableCell(c,f)).join('');
+    tr.addEventListener('click', ()=> openEditPanel(c.noCaso));
+    frag.appendChild(tr);
   });
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
 }
 [['tfSearch','search'],['tfTipo','tipo'],['tfCrit','crit'],['tfMesa','mesa'],['tfSrl','srl'],['tfEstado','estado']].forEach(([id,key])=>{
-  document.getElementById(id).addEventListener('input', e=>{ tFilters[key]=e.target.value; renderTable(); });
-  document.getElementById(id).addEventListener('change', e=>{ tFilters[key]=e.target.value; renderTable(); });
+  document.getElementById(id).addEventListener('input', e=>{ tFilters[key]=e.target.value; tablePage=0; renderTable(); });
+  document.getElementById(id).addEventListener('change', e=>{ tFilters[key]=e.target.value; tablePage=0; renderTable(); });
+});
+document.getElementById('tblPrev').addEventListener('click', ()=>{ if(tablePage>0){ tablePage--; renderTable(); } });
+document.getElementById('tblNext').addEventListener('click', ()=>{ tablePage++; renderTable(); });
+document.getElementById('btnToggleCols').addEventListener('click', ()=>{
+  tableShowAranda = !tableShowAranda;
+  document.getElementById('btnToggleCols').textContent = tableShowAranda ? '− Columnas Aranda' : '+ Columnas Aranda';
+  renderTable();
 });
 
 /* ================= EDIT PANEL ================= */
