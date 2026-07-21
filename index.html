@@ -988,6 +988,7 @@ function renderGestion(){
         '<td>'+escapeHtml(c.responsable||'—')+'</td>'+
         '<td><select class="gsrl">'+gestSelOptions(SRLS, c.srlResponsable)+'</select></td>'+
         '<td><select class="gestado">'+gestSelOptions(STATES_KANBAN, c.estadoBau)+'</select></td>'+
+        '<td style="white-space:nowrap;font-size:11px;">'+escapeHtml(formatDate(c.fechaRegistro)||'—')+'</td>'+
         '<td style="text-align:center;">'+dias+'</td>'+
         '<td style="min-width:160px;">'+
           '<div style="display:flex;align-items:center;gap:6px;">'+
@@ -1007,7 +1008,7 @@ function renderGestion(){
       '<div class="gest-group-header"><h3>'+(collapsed?'▸':'▾')+' '+escapeHtml(title)+' <span style="font-weight:normal;color:#5b6b7c;">('+inMesa.length+')</span></h3>'+
       '<div class="stats">'+estadoStats+(fueraN?'<span class="gest-stat warn">Fuera ANS: '+fueraN+'</span>':'')+'</div></div>'+
       (collapsed ? '' : '<div class="gest-table-wrap"><table class="gest-table"><thead><tr>'+
-        '<th style="width:26px;"></th><th>Prio</th><th>No. Caso</th><th>Asunto</th><th>Tipo</th><th>Responsable</th><th>SRL</th><th>Estado BAU</th><th>Días</th><th>ANS</th><th>Próximo paso</th>'+
+        '<th style="width:26px;"></th><th>Prio</th><th>No. Caso</th><th>Asunto</th><th>Tipo</th><th>Responsable</th><th>SRL</th><th>Estado BAU</th><th>F. Registro</th><th>Días</th><th>ANS (hábiles)</th><th>Próximo paso</th>'+
         '</tr></thead><tbody>'+rows+'</tbody></table></div>'+moreBtn)+
       '</div>';
   }).join('');
