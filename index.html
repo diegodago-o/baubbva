@@ -463,7 +463,7 @@ const MANUAL_FIELDS = [
 ];
 const ALL_FIELDS = ARANDA_FIELDS.concat(MANUAL_FIELDS);
 
-const STATES_KANBAN = ['Registro','Análisis','Desarrollo','Calidad','Pdte Instalación','Bloqueado','Cerrado'];
+const STATES_KANBAN = ['Registro','Análisis','Desarrollo','Calidad','Pdte Instalación','Bloqueado','Cerrado','Descartado'];
 const CRITICIDADES = ['Crítica','Alta','Media','Baja'];
 const CRIT_COLORS = {'Crítica':'#d32f2f','Alta':'#f57c00','Media':'#fbc02d','Baja':'#43a047'};
 const MESAS = ['AcselX','AcselWeb','Altamira','SICS','Oasis','APlus'];
@@ -753,7 +753,7 @@ function renderKanban(){
   const mostrarCerrados = document.getElementById('kfMostrarCerrados').checked;
   const casos = kanbanFilteredCasos();
   board.innerHTML = '';
-  const statesVisible = mostrarCerrados ? STATES_KANBAN : STATES_KANBAN.filter(s=>s!=='Cerrado');
+  const statesVisible = mostrarCerrados ? STATES_KANBAN : STATES_KANBAN.filter(s=>s!=='Cerrado' && s!=='Descartado');
   statesVisible.forEach(state=>{
     const col = document.createElement('div');
     col.className='kanban-col';
