@@ -6,6 +6,7 @@
 <title>Mesa BAU - BBVA Seguros Colombia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
 :root{
   --navy:#072146;
@@ -555,13 +556,35 @@ function defaultManualFields(){
 }
 
 /* ================= PERSISTENCE ================= */
+const BAU_KEY = 'bau_casos';
+const BAU_KEY_V2 = 'bau_casos_lz'; // clave con compresión
 function saveState(){
-  localStorage.setItem('bau_casos', JSON.stringify(casosMap));
+  try{
+    const json = JSON.stringify(casosMap);
+    const compressed = LZString.compressToUTF16(json);
+    localStorage.removeItem(BAU_KEY); // limpiar formato antiguo sin comprimir
+    localStorage.setItem(BAU_KEY_V2, compressed);
+  }catch(e){
+    showToast('Error al guardar: '+e.message+'. Exporta un backup ahora.');
+    console.error('saveState error:', e);
+  }
 }
 function loadState(){
   try{
-    const raw = localStorage.getItem('bau_casos');
+    // Intentar clave comprimida primero
+    const compressed = localStorage.getItem(BAU_KEY_V2);
+    if(compressed){
+      const json = LZString.decompressFromUTF16(compressed);
+      casosMap = json ? JSON.parse(json) : {};
+      return;
+    }
+    // Fallback: clave antigua sin comprimir (migración automática)
+    const raw = localStorage.getItem(BAU_KEY);
     casosMap = raw ? JSON.parse(raw) : {};
+    if(raw && Object.keys(casosMap).length > 0){
+      saveState(); // migrar a formato comprimido
+      localStorage.removeItem(BAU_KEY);
+    }
   }catch(e){
     casosMap = {};
   }
