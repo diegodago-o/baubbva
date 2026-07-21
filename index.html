@@ -263,7 +263,7 @@ details summary{cursor:pointer;font-size:12px;color:var(--azul);margin-bottom:8p
       <h2 class="section-title" style="margin-top:0;">Semáforo por Mesa</h2>
       <div style="overflow-x:auto;">
       <table id="semaforoTable">
-        <thead><tr><th>Mesa</th><th>N-T1</th><th>N-T2</th><th>N-T3</th><th>INC-C</th><th>INC-F</th><th>INC-O</th><th>MNT</th><th>Bloqueados</th><th>Días prom.</th><th>Alerta</th></tr></thead>
+        <thead><tr><th>Mesa</th><th>N-T1</th><th>N-T2</th><th>N-T3</th><th>INC-C</th><th>INC-F</th><th>INC-O</th><th>MNT</th><th>Bloqueados</th><th>Horas háb. prom.</th><th>Alerta</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
@@ -469,11 +469,11 @@ const CRIT_COLORS = {'Crítica':'#d32f2f','Alta':'#f57c00','Media':'#fbc02d','Ba
 const MESAS = ['AcselX','AcselWeb','Altamira','SICS','Oasis','APlus'];
 const SRLS = ['José Miguel','Juan Carlos','Cristian Ramírez','Sin asignar'];
 const TIPOS = ['Novedad T1','Novedad T2','Novedad T3','Incidencia Crítica','Incidencia Funcional','Incidencia Operativa','Mantenimiento'];
-const SLA_HORAS = {'Novedad T1':13,'Novedad T2':28,'Novedad T3':43,'Incidencia Crítica':36,'Incidencia Funcional':90,'Incidencia Operativa':70,'Mantenimiento':112};
+const SLA_HORAS = {'Novedad T1':13,'Novedad T2':30,'Novedad T3':50,'Incidencia Crítica':34,'Incidencia Funcional':90,'Incidencia Operativa':70,'Mantenimiento':112};
 const TIPO_COLORS = {'Novedad T1':'#0288d1','Novedad T2':'#0097a7','Novedad T3':'#00838f','Incidencia Crítica':'#c0392b','Incidencia Funcional':'#e67e22','Incidencia Operativa':'#f39c12','Mantenimiento':'#7b1fa2'};
 const TIPO_SHORT = {'Novedad T1':'N-T1','Novedad T2':'N-T2','Novedad T3':'N-T3','Incidencia Crítica':'INC-C','Incidencia Funcional':'INC-F','Incidencia Operativa':'INC-O','Mantenimiento':'MNT'};
 function calcAnsSLA(tipo){ return SLA_HORAS[tipo] || null; }
-function isFueraAns(caso){ const d=calcDiasEnCola(caso); const s=calcAnsSLA(caso.tipo); return typeof d==='number' && s ? (d*8)>s : false; }
+function isFueraAns(caso){ const h=calcHorasHabiles(caso); const s=calcAnsSLA(caso.tipo); return typeof h==='number' && s ? h>s : false; }
 
 const ARANDA_HEADER_MAP = {};
 ARANDA_FIELDS.forEach(f=>{ ARANDA_HEADER_MAP[normalize(f.label)] = f.key; });
@@ -539,6 +539,50 @@ function calcDiasEnCola(caso){
   const a = new Date(today.getFullYear(),today.getMonth(),today.getDate());
   const b = new Date(fr.getFullYear(),fr.getMonth(),fr.getDate());
   return Math.round((a-b)/86400000);
+}
+function calcDiasHabiles(desde, hasta){
+  // Cuenta días hábiles (lunes-viernes) entre dos fechas, inclusive ambos extremos
+  let count = 0;
+  const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+  const fin = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+  while(d <= fin){
+    const dow = d.getDay();
+    if(dow !== 0 && dow !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+function calcHorasHabiles(caso){
+  // Horas hábiles transcurridas = días hábiles × 8h
+  const fr = toDate(caso.fechaRegistro);
+  if(!fr) return '';
+  const hoy = new Date();
+  const dias = calcDiasHabiles(fr, hoy);
+  return dias * 8;
+}
+function calcAnsMetrics(caso){
+  // Retorna {horas, sla, restantes, pct, fuera}
+  const h = calcHorasHabiles(caso);
+  const sla = calcAnsSLA(caso.tipo);
+  if(typeof h !== 'number' || !sla) return null;
+  const restantes = sla - h;
+  const pct = Math.min(Math.round(h / sla * 100), 999);
+  return { horas:h, sla, restantes, pct, fuera: h > sla };
+}
+function ansBarHtml(m){
+  // Mini barra de progreso inline para tarjetas y tabla
+  if(!m) return '';
+  const color = m.fuera ? '#c0392b' : m.pct >= 80 ? '#e67e22' : '#43a047';
+  const w = Math.min(m.pct, 100);
+  const label = m.fuera
+    ? m.horas+'h / '+m.sla+'h · <b>+'+Math.abs(m.restantes)+'h vencidas</b>'
+    : m.horas+'h / '+m.sla+'h · '+m.restantes+'h restantes';
+  return '<div style="margin-top:4px;">'+
+    '<div style="background:#e2e8f0;border-radius:4px;height:5px;overflow:hidden;">'+
+      '<div style="background:'+color+';width:'+w+'%;height:100%;border-radius:4px;"></div>'+
+    '</div>'+
+    '<div style="font-size:10px;color:'+(m.fuera?'#c0392b':'#5b6b7c')+';margin-top:2px;">'+label+'</div>'+
+  '</div>';
 }
 function calcMesa(servicio){
   const s = normalize(servicio);
@@ -789,9 +833,7 @@ function buildKanbanCard(c){
   const tipoColor = TIPO_COLORS[c.tipo] || '#555';
   const tipoShort = TIPO_SHORT[c.tipo] || escapeHtml(c.tipo||'');
   const tipoBadge = c.tipo ? '<span class="tipo-badge" style="background:'+tipoColor+'">'+tipoShort+'</span>' : '';
-  const slaInfo = c.ansSLA ? '<span style="font-size:10px;color:#8a97a5;">SLA: '+c.ansSLA+'h</span>' : '';
-  const diasCol = calcDiasEnCola(c);
-  const diasColor = (typeof diasCol==='number' && c.ansSLA && (diasCol*8)>c.ansSLA) ? '#c0392b' : '#5b6b7c';
+  const ans = calcAnsMetrics(c);
   div.innerHTML =
     '<div class="kc-top"><span>'+escapeHtml(c.noCaso)+'</span>'+
     '<button class="star-btn" title="Crítico activo">'+(c.esCriticoActivo?'⭐':'☆')+'</button></div>'+
@@ -799,9 +841,8 @@ function buildKanbanCard(c){
     '<div class="kc-asunto">'+escapeHtml(asuntoTrunc)+'</div>'+
     '<div class="kc-meta">'+
     '<span>'+escapeHtml(c.mesa||'-')+'</span>'+
-    '<span style="color:'+diasColor+';font-weight:'+(diasColor==='#c0392b'?'bold':'normal')+'">'+diasCol+' días</span>'+
-    slaInfo+
     '<span>'+escapeHtml(c.srlResponsable||'-')+'</span></div>'+
+    ansBarHtml(ans)+
     (c.bloqueador ? '<div class="kc-bloqueador">⛔ '+escapeHtml(c.bloqueador)+'</div>' : '');
   div.addEventListener('dragstart', e=>{
     e.dataTransfer.setData('text/plain', c.noCaso);
@@ -932,6 +973,12 @@ function renderGestion(){
       const tc = TIPO_COLORS[c.tipo]||'#555';
       const prio = hasPrio(c) ? c.prioBau : '—';
       const sel = gSelection.has(c.noCaso) ? ' checked' : '';
+      const ans = calcAnsMetrics(c);
+      const ansColor = !ans ? '#8a97a5' : ans.fuera ? '#c0392b' : ans.pct >= 80 ? '#e67e22' : '#43a047';
+      const ansLabel = !ans ? '—' : ans.fuera
+        ? ans.horas+'h / '+ans.sla+'h (+'+Math.abs(ans.restantes)+'h)'
+        : ans.horas+'h / '+ans.sla+'h (−'+ans.restantes+'h)';
+      const ansPct = ans ? ans.pct+'%' : '';
       return '<tr data-nocaso="'+escapeHtml(c.noCaso)+'">'+
         '<td><input type="checkbox" class="gsel"'+sel+'></td>'+
         '<td style="white-space:nowrap;"><span class="prio-num">'+prio+'</span><span class="prio-btns"><button class="gup" title="Subir prioridad">▲</button><button class="gdn" title="Bajar prioridad">▼</button></span></td>'+
@@ -940,9 +987,17 @@ function renderGestion(){
         '<td><select class="gtipo" style="border-left:4px solid '+tc+'">'+gestSelOptions(TIPOS, c.tipo)+'</select></td>'+
         '<td>'+escapeHtml(c.responsable||'—')+'</td>'+
         '<td><select class="gsrl">'+gestSelOptions(SRLS, c.srlResponsable)+'</select></td>'+
-        '<td><select class="gestado">'+gestSelOptions(STATES_KANBAN.concat(['Descartado']), c.estadoBau)+'</select></td>'+
-        '<td style="text-align:center;'+(fuera?'color:#c0392b;font-weight:bold;':'')+'">'+dias+'</td>'+
-        '<td><span class="sla-pill" style="background:'+(fuera?'#c0392b':'#43a047')+'" title="SLA '+(c.ansSLA||'-')+'h · usadas aprox '+(typeof dias==='number'?dias*8:'-')+'h">'+(fuera?'Fuera':'A tiempo')+' · '+(c.ansSLA||'-')+'h</span></td>'+
+        '<td><select class="gestado">'+gestSelOptions(STATES_KANBAN, c.estadoBau)+'</select></td>'+
+        '<td style="text-align:center;">'+dias+'</td>'+
+        '<td style="min-width:160px;">'+
+          '<div style="display:flex;align-items:center;gap:6px;">'+
+            '<div style="flex:1;background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden;" title="'+ansLabel+'">'+
+              '<div style="background:'+ansColor+';width:'+Math.min(ans?ans.pct:0,100)+'%;height:100%;border-radius:4px;"></div>'+
+            '</div>'+
+            '<span style="font-size:10px;color:'+ansColor+';font-weight:bold;white-space:nowrap;">'+ansPct+'</span>'+
+          '</div>'+
+          '<div style="font-size:10px;color:'+ansColor+';">'+ansLabel+'</div>'+
+        '</td>'+
         '<td><input type="text" class="gpaso" value="'+escapeHtml(c.proximoPaso||'')+'" placeholder="Próximo paso..."></td>'+
         '</tr>';
     }).join('');
@@ -1093,13 +1148,13 @@ function renderDashboard(){
   tbody.innerHTML = MESAS.map(mesa=>{
     const inMesa = activos.filter(c=>c.mesa===mesa);
     const bloq = inMesa.filter(c=>c.estadoBau==='Bloqueado').length;
-    const dias = inMesa.map(calcDiasEnCola).filter(d=>typeof d==='number');
-    const prom = dias.length ? (dias.reduce((a,b)=>a+b,0)/dias.length) : 0;
+    const horas = inMesa.map(calcHorasHabiles).filter(h=>typeof h==='number');
+    const promH = horas.length ? Math.round(horas.reduce((a,b)=>a+b,0)/horas.length) : 0;
     let alerta='verde', txt='Normal';
     if(bloq>0){ alerta='rojo'; txt='Bloqueado'; }
-    else if(prom>30){ alerta='amarillo'; txt='Atención'; }
+    else if(promH>80){ alerta='amarillo'; txt='Atención'; }
     const tipoCells = TIPOS.map(t=>'<td style="text-align:center">'+inMesa.filter(c=>c.tipo===t).length+'</td>').join('');
-    return '<tr><td><b>'+escapeHtml(mesa)+'</b></td>'+tipoCells+'<td style="text-align:center">'+bloq+'</td><td style="text-align:center">'+prom.toFixed(1)+'</td>'+
+    return '<tr><td><b>'+escapeHtml(mesa)+'</b></td>'+tipoCells+'<td style="text-align:center">'+bloq+'</td><td style="text-align:center">'+promH+'h</td>'+
       '<td><span class="alert-cell alert-'+alerta+'">'+txt+'</span></td></tr>';
   }).join('');
 
